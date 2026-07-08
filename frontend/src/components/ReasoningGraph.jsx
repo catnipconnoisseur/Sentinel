@@ -2,17 +2,20 @@
  * ReasoningGraph — React Flow visualization of the investigation reasoning.
  * Nodes are colored by type (root_cause, symptom, etc.)
  * Clicking a node opens the EvidenceDrawer.
+ *
+ * Animation: Nodes reveal layer-by-layer (topological order) with a staggered
+ * fade-in-scale effect. Edges appear after both their source and target nodes
+ * are visible. This creates the illusion of the AI "building" its reasoning
+ * chain in real-time — the single most impactful demo moment.
  */
 
-import { useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   ReactFlow,
   Background,
   Controls,
   Handle,
   Position,
-  useNodesState,
-  useEdgesState,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -20,7 +23,11 @@ import '@xyflow/react/dist/style.css';
 
 function ReasoningNodeComponent({ data }) {
   return (
-    <div className={`reasoning-node ${data.type}`} onClick={data.onClick}>
+    <div
+      className={`reasoning-node ${data.type} ${data.visible ? 'node-visible' : 'node-hidden'}`}
+      onClick={data.onClick}
+      style={{ animationDelay: `${data.animDelay}ms` }}
+    >
       <Handle type="target" position={Position.Top} style={{ background: '#6366f1', border: 'none', width: 8, height: 8 }} />
       <div className="flex items-center gap-2 mb-1">
         <span className="text-base">{data.icon}</span>
@@ -90,6 +97,7 @@ function layoutNodes(nodes, edges) {
   const V_GAP = 60;
 
   const positions = {};
+  const nodeLayerMap = {};
   layers.forEach((layer, layerIdx) => {
     const totalWidth = layer.length * NODE_WIDTH + (layer.length - 1) * H_GAP;
     const startX = -totalWidth / 2;
@@ -98,10 +106,11 @@ function layoutNodes(nodes, edges) {
         x: startX + nodeIdx * (NODE_WIDTH + H_GAP),
         y: layerIdx * (NODE_HEIGHT + V_GAP),
       };
+      nodeLayerMap[nodeId] = layerIdx;
     });
   });
 
-  return positions;
+  return { positions, layers, nodeLayerMap };
 }
 
 // ─── Edge Styling ───────────────────────────────────────────────
@@ -113,56 +122,130 @@ const edgeColors = {
   indicates: '#3b82f6',
 };
 
+// ─── Animation Constants ────────────────────────────────────────
+
+const NODE_REVEAL_INTERVAL = 400;  // ms between each layer
+const EDGE_REVEAL_DELAY = 250;     // ms after a node layer before its edges show
+
 // ─── Main Component ─────────────────────────────────────────────
 
 export default function ReasoningGraph({ investigation, onNodeClick }) {
   if (!investigation) return null;
 
-  const positions = useMemo(
+  const [visibleNodeIds, setVisibleNodeIds] = useState(new Set());
+  const [visibleEdgeIds, setVisibleEdgeIds] = useState(new Set());
+  const prevInvestigationRef = useRef(null);
+
+  const { positions, layers, nodeLayerMap } = useMemo(
     () => layoutNodes(investigation.nodes, investigation.edges),
     [investigation]
   );
 
+  // ─── Staggered reveal animation ────────────────────────────
+  useEffect(() => {
+    // Only animate if this is a new investigation result
+    if (prevInvestigationRef.current === investigation) return;
+    prevInvestigationRef.current = investigation;
+
+    // Reset
+    setVisibleNodeIds(new Set());
+    setVisibleEdgeIds(new Set());
+
+    const timers = [];
+
+    layers.forEach((layerNodeIds, layerIdx) => {
+      // Reveal this layer's nodes
+      const nodeTimer = setTimeout(() => {
+        setVisibleNodeIds((prev) => {
+          const next = new Set(prev);
+          layerNodeIds.forEach((id) => next.add(id));
+          return next;
+        });
+      }, layerIdx * NODE_REVEAL_INTERVAL);
+      timers.push(nodeTimer);
+
+      // Reveal edges that connect to this layer (after a short delay)
+      const edgeTimer = setTimeout(() => {
+        setVisibleEdgeIds((prev) => {
+          const next = new Set(prev);
+          investigation.edges.forEach((edge, i) => {
+            const sourceLayer = nodeLayerMap[edge.source];
+            const targetLayer = nodeLayerMap[edge.target];
+            // Show edge only if both nodes are in revealed layers
+            if (sourceLayer !== undefined && targetLayer !== undefined &&
+                sourceLayer <= layerIdx && targetLayer <= layerIdx) {
+              next.add(`e-${i}`);
+            }
+          });
+          return next;
+        });
+      }, layerIdx * NODE_REVEAL_INTERVAL + EDGE_REVEAL_DELAY);
+      timers.push(edgeTimer);
+    });
+
+    return () => timers.forEach(clearTimeout);
+  }, [investigation, layers, nodeLayerMap]);
+
+  // ─── Build React Flow data ─────────────────────────────────
+
   const flowNodes = useMemo(() =>
-    investigation.nodes.map((node) => ({
-      id: node.id,
-      type: 'reasoning',
-      position: positions[node.id] || { x: 0, y: 0 },
-      data: {
-        label: node.label,
-        type: node.type,
-        icon: typeIcons[node.type] || '⚪',
-        confidence: node.confidence,
-        evidenceCount: node.evidence?.length || 0,
-        onClick: () => onNodeClick?.(node),
-      },
-    })),
-    [investigation, positions, onNodeClick]
+    investigation.nodes.map((node) => {
+      const layerIdx = nodeLayerMap[node.id] || 0;
+      return {
+        id: node.id,
+        type: 'reasoning',
+        position: positions[node.id] || { x: 0, y: 0 },
+        hidden: !visibleNodeIds.has(node.id),
+        data: {
+          label: node.label,
+          type: node.type,
+          icon: typeIcons[node.type] || '⚪',
+          confidence: node.confidence,
+          evidenceCount: node.evidence?.length || 0,
+          visible: visibleNodeIds.has(node.id),
+          animDelay: 0,
+          onClick: () => onNodeClick?.(node),
+        },
+      };
+    }),
+    [investigation, positions, onNodeClick, visibleNodeIds, nodeLayerMap]
   );
 
   const flowEdges = useMemo(() =>
-    investigation.edges.map((edge, i) => ({
-      id: `e-${i}`,
-      source: edge.source,
-      target: edge.target,
-      label: edge.relationship?.replace('_', ' '),
-      animated: true,
-      style: {
-        stroke: edgeColors[edge.relationship] || '#6366f1',
-        strokeWidth: 2,
-      },
-      labelStyle: {
-        fill: 'var(--text-muted)',
-        fontSize: 10,
-        fontWeight: 500,
-      },
-      labelBgStyle: {
-        fill: 'var(--bg-card)',
-        fillOpacity: 0.9,
-      },
-    })),
-    [investigation]
+    investigation.edges.map((edge, i) => {
+      const edgeId = `e-${i}`;
+      return {
+        id: edgeId,
+        source: edge.source,
+        target: edge.target,
+        label: edge.relationship?.replace('_', ' '),
+        animated: true,
+        hidden: !visibleEdgeIds.has(edgeId),
+        style: {
+          stroke: edgeColors[edge.relationship] || '#6366f1',
+          strokeWidth: 2,
+          opacity: visibleEdgeIds.has(edgeId) ? 1 : 0,
+          transition: 'opacity 0.4s ease',
+        },
+        labelStyle: {
+          fill: 'var(--text-muted)',
+          fontSize: 10,
+          fontWeight: 500,
+          opacity: visibleEdgeIds.has(edgeId) ? 1 : 0,
+          transition: 'opacity 0.4s ease',
+        },
+        labelBgStyle: {
+          fill: 'var(--bg-card)',
+          fillOpacity: visibleEdgeIds.has(edgeId) ? 0.9 : 0,
+        },
+      };
+    }),
+    [investigation, visibleEdgeIds]
   );
+
+  const animationProgress = layers.length > 0
+    ? Math.round((visibleNodeIds.size / investigation.nodes.length) * 100)
+    : 100;
 
   return (
     <div className="glass-card overflow-hidden" style={{ height: 500 }}>
@@ -170,9 +253,22 @@ export default function ReasoningGraph({ investigation, onNodeClick }) {
         <h3 className="text-sm font-semibold text-[var(--text-primary)]">
           🧠 Reasoning Graph
         </h3>
-        <span className="text-xs text-[var(--text-muted)]">
-          Click nodes for evidence details
-        </span>
+        <div className="flex items-center gap-3">
+          {animationProgress < 100 && (
+            <div className="flex items-center gap-2">
+              <div className="w-20 h-1 rounded-full bg-[var(--bg-primary)] overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-300"
+                  style={{ width: `${animationProgress}%` }}
+                />
+              </div>
+              <span className="text-xs text-indigo-400 font-mono">Reasoning...</span>
+            </div>
+          )}
+          <span className="text-xs text-[var(--text-muted)]">
+            Click nodes for evidence details
+          </span>
+        </div>
       </div>
       <ReactFlow
         nodes={flowNodes}

@@ -4,6 +4,9 @@ Sentinel API — FastAPI application entry point.
 Run with: uvicorn app.main:app --reload --port 8000
 """
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager

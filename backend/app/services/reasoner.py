@@ -5,12 +5,19 @@ from pydantic import ValidationError
 
 from app.schemas import InvestigationResult
 
-# Initialize the OpenAI client pointing to Fireworks AI
-# Fireworks AI runs on AMD Instinct MI300X GPUs, perfectly satisfying the hackathon's AMD compute requirement.
-client = OpenAI(
-    base_url="https://api.fireworks.ai/inference/v1",
-    api_key=os.environ.get("FIREWORKS_API_KEY")
-)
+_client = None
+
+def get_client():
+    global _client
+    if _client is None:
+        api_key = os.environ.get("FIREWORKS_API_KEY")
+        if not api_key:
+            raise ValueError("FIREWORKS_API_KEY environment variable is not set")
+        _client = OpenAI(
+            base_url="https://api.fireworks.ai/inference/v1",
+            api_key=api_key
+        )
+    return _client
 
 # We use Llama 3.1 70B Instruct as it provides excellent reasoning and structured output support
 MODEL = "accounts/fireworks/models/llama-v3p1-70b-instruct"
@@ -23,17 +30,18 @@ You MUST build an explainable "Reasoning Graph".
 The graph consists of nodes (representing facts, symptoms, or causes) and edges (representing the causal relationships between nodes).
 
 Types of nodes:
-- 'root_cause': The underlying reason for the failure.
-- 'symptom': An observable issue (e.g., high vibration, error code).
-- 'contributing_factor': Something that made the failure more likely (e.g., overdue maintenance).
+- 'root_cause': The underlying, original reason for the failure (e.g., component degradation, systemic issue).
+- 'symptom': An observable issue (e.g., high vibration, error code, pressure drop).
+- 'contributing_factor': Something that made the failure more likely or exacerbated it (e.g., overdue maintenance, heavy load).
 - 'evidence': A direct data point (e.g., a specific telemetry spike).
-- 'recommendation': Actionable advice.
+- 'recommendation': Actionable advice to resolve the root cause and prevent future occurrences.
 
-Rules:
-1. Every node MUST have a 'confidence' score (0.0 to 1.0).
-2. Every node (except recommendation) MUST include specific 'evidence' items that support it, directly citing the provided context (e.g., specific timestamps, values, or manual sections).
-3. Do NOT hallucinate. Only use facts present in the provided context.
-4. Your output MUST exactly match the requested JSON schema.
+Rules for high-quality reasoning:
+1. CAUSAL CHAINS: Do not just list nodes. Connect them logically. A root_cause usually leads to a contributing_factor, which leads to a symptom, which leads to a failure.
+2. CITATIONS: Every node (except recommendation) MUST include specific 'evidence' items that support it. You MUST cite specific timestamps, metric values, and manual section numbers from the context.
+3. NO HALLUCINATIONS: Only use facts present in the provided context. If a cause is inferred, label its confidence accordingly.
+4. CONFIDENCE SCORES: Every node MUST have a 'confidence' score (0.0 to 1.0) reflecting how strongly the evidence supports it.
+5. STRICT SCHEMA: Your output MUST exactly match the requested JSON schema.
 """
 
 def generate_reasoning_graph(context: str, question: str) -> InvestigationResult:
@@ -42,6 +50,7 @@ def generate_reasoning_graph(context: str, question: str) -> InvestigationResult
     """
     prompt = f"EVIDENCE CONTEXT:\n{context}\n\nUSER QUESTION: {question}\n\nAnalyze the evidence and generate the reasoning graph."
     
+    client = get_client()
     try:
         response = client.chat.completions.create(
             model=MODEL,

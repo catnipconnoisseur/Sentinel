@@ -1,116 +1,108 @@
-# Sentinel — AI Reasoning Engine for Industrial Investigations
+# Sentinel
+> An AI reasoning engine for industrial investigations.
 
-Sentinel transforms fragmented factory data (machine telemetry, error logs, maintenance records, and documentation) into explainable, interactive root-cause investigation graphs. Built for the **AMD Developer Challenge (Unicorn Track)**.
+![Sentinel Logo](https://img.shields.io/badge/Sentinel-Industrial_AI-6366f1?style=for-the-badge)
+![AMD Developer Challenge](https://img.shields.io/badge/AMD_Hackathon-Unicorn_Track-ed1c24?style=for-the-badge)
 
----
+## The Problem
+Today's factories collect enormous amounts of information: machine telemetry, sensor data, error logs, and maintenance records. But when a critical machine goes offline, engineers are forced to manually sift through these fragmented, siloed systems to figure out *why*. This leads to prolonged downtime and lost revenue.
 
-## 🚀 The Core Vision
+## The Solution
+**Sentinel** is an autonomous investigation engine that acts as a senior reliability engineer. When a machine fails, Sentinel ingests the fragmented evidence, retrieves relevant technical manuals using a local vector database, and uses advanced causal reasoning to build an **explainable reasoning graph**. 
 
-Modern industrial environments do not suffer from a lack of data; they suffer from fragmented dashboards. When a machine fails, engineers must manually cross-reference telemetry spikes, error codes, past maintenance notes, and static PDF manuals to isolate the root cause.
+Instead of generating a wall of text, Sentinel maps out the exact sequence of events (e.g., *Overdue Maintenance* → *Bearing Wear* → *Abnormal Vibration* → *Failure*) and cites specific telemetry spikes and manual sections for every deduction.
 
-Sentinel automate this entire diagnostic pipeline:
-1. **Detects** machine anomalies (e.g. Critical Failure states).
-2. **Retrieves** relevant contextual data (SQLite) and manual specifications (ChromaDB Vector Store).
-3. **Reasons** across these sources using Fireworks AI.
-4. **Visualizes** the diagnostic chain as an interactive, causal graph (React Flow).
+## Architecture
 
----
+Sentinel is built for speed, privacy, and accuracy.
 
-## 🛠️ Tech Stack & AMD Integration
+```mermaid
+graph TD
+    %% Users
+    User((Engineer))
 
-Sentinel is architected for maximum demo impact, execution simplicity, and high compatibility with the AMD compute ecosystem:
+    %% Frontend
+    subgraph Frontend [React Frontend]
+        UI[Dashboard & Graph UI]
+    end
 
-* **Frontend:** React, Vite, TailwindCSS, React Flow, Recharts.
-* **Backend:** FastAPI (Python), SQLAlchemy, SQLite.
-* **Vector DB & RAG:** ChromaDB using a local `all-MiniLM-L6-v2` ONNX embedding pipeline.
-* **Inference Engine:** **Fireworks AI API** (utilizing `llama-v3p1-70b-instruct` with strict `json_schema` constraints).
-  * *AMD Alignment:* Fireworks AI performs model inference on **AMD Instinct MI300X GPUs**, demonstrating high-throughput enterprise-grade AMD compute.
+    %% Backend
+    subgraph Backend [FastAPI Backend]
+        API[Investigation Router]
+        Retriever[Retriever Service]
+        Reasoner[Reasoning Service]
+    end
 
----
+    %% Data Sources
+    subgraph Data [Data Sources]
+        SQLite[(SQLite Data)]
+        Chroma[(ChromaDB Vector Store)]
+    end
 
-## 📁 Repository Structure
+    %% External
+    subgraph AMD [AMD Compute Layer]
+        Fireworks[Fireworks AI API<br/>Llama 3.1 70B on MI300X]
+    end
 
+    %% Flow
+    User -->|Asks Question| UI
+    UI -->|POST /investigate| API
+    API --> Retriever
+    Retriever -->|SQL Queries| SQLite
+    Retriever -->|Semantic Search| Chroma
+    Retriever -->|Evidentiary Context| Reasoner
+    Reasoner -->|Structured Output JSON| Fireworks
+    Fireworks -->|Reasoning Graph| Reasoner
+    Reasoner -->|Animated Graph & Evidence| UI
 ```
-sentinel/
-├── frontend/                    # React frontend application
-│   ├── src/
-│   │   ├── components/          # Reusable UI widgets & graphs (React Flow, Recharts)
-│   │   ├── hooks/               # Custom hooks (API state management)
-│   │   └── api/                 # API client wrapper
-│   └── vite.config.js
-│
-├── backend/                     # FastAPI backend application
-│   ├── app/
-│   │   ├── routers/             # Endpoint definitions (/api/machines, /api/investigate)
-│   │   ├── services/            # Retriever (SQL + ChromaDB) & Reasoner (Fireworks AI)
-│   │   ├── data/                # Data loader & synthetic dataset generators
-│   │   ├── database.py          # SQLAlchemy connection
-│   │   ├── models.py            # SQLite ORM models
-│   │   └── schemas.py           # Pydantic validation schemas
-│   └── requirements.txt
-│
-└── README.md
+
+### Tech Stack
+* **Frontend**: React, Vite, TailwindCSS, React Flow (for the visual graph), Recharts.
+* **Backend**: FastAPI, SQLAlchemy.
+* **Databases**: SQLite (for tabular telemetry/logs), ChromaDB (for vector search over manuals).
+* **AI & Compute**: **Fireworks AI** running Llama 3.1 70B Instruct, powered by **AMD MI300X accelerators**. We enforce strict JSON schema output to guarantee valid graph structures on every request.
+
+## AMD Integration
+This project was built specifically for the **AMD Developer Challenge**. We fulfill the AMD compute requirement by utilizing the **Fireworks AI API**, which serves open-source models natively on AMD Instinct™ MI300X accelerators. By offloading our heavy multi-step causal reasoning to Llama 3.1 70B via Fireworks, we achieve the rapid time-to-first-token necessary for a fluid, interactive UI, directly demonstrating the raw throughput capabilities of AMD hardware.
+
+## Running Locally
+
+1. **Clone the repository**
+```bash
+git clone https://github.com/catnipconnoisseur/Sentinel.git
+cd Sentinel
 ```
 
----
+2. **Run with Docker Compose**
+Ensure you have Docker installed and set your Fireworks API key:
+```bash
+export FIREWORKS_API_KEY=your_key_here
+docker-compose up --build
+```
+*The app will be available at http://localhost*
 
-## ⚡ Setup & Run Instructions
+### Manual Setup (Without Docker)
 
-### Prerequisites
-* Python 3.9+
-* Node.js (with npm)
-* A Fireworks AI API Key
+**Backend:**
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+export FIREWORKS_API_KEY=your_key_here
+uvicorn app.main:app --reload --port 8000
+```
 
-### Backend Setup
-1. Navigate to the backend folder:
-   ```bash
-   cd backend
-   ```
-2. Create and activate a virtual environment:
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Create a `.env` file in the `backend/` directory:
-   ```env
-   FIREWORKS_API_KEY=your_fireworks_api_key_here
-   ```
-5. Generate the synthetic dataset and populate the database:
-   ```bash
-   python3 app/data/synthetic.py
-   PYTHONPATH=. python3 app/data/loader.py
-   PYTHONPATH=. python3 app/services/embeddings.py
-   ```
-6. Start the FastAPI development server:
-   ```bash
-   uvicorn app.main:app --reload --port 8000
-   ```
+**Frontend:**
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-### Frontend Setup
-1. Navigate to the frontend folder:
-   ```bash
-   cd ../frontend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the Vite development server:
-   ```bash
-   npm run dev
-   ```
-4. Open your browser and navigate to **[http://localhost:5173](http://localhost:5173)**.
-
----
-
-## 🎯 Demo Path
-
-1. **Factory Overview:** The dashboard lists 100 machines. **Machine 14** is marked in a **Critical** state (red status dot) due to a simulated component breakdown.
-2. **Investigation Interface:** Click on Machine 14 to see its historical telemetry, errors, and maintenance records.
-3. **Ask Sentinel:** Ask `"Why did this machine fail yesterday?"` and run the investigation.
-4. **Interactive Causal Graph:** Watch the reasoning graph dynamically construct, linking the overdue maintenance warning to bearing degradation, high vibration anomalies, and the final mechanical failure.
-5. **Inspect Evidence:** Click on any node in the graph (such as the "Bearing Wear" node) to slide out the evidence drawer, showcasing exact telemetry numbers and sections of the machine manual.
+## Hackathon Milestones Completed ✅
+We meticulously planned and executed this project over a strict 4-day timeline.
+* Day 1: Foundation (FastAPI + React Flow + SQLite schemas)
+* Day 2: Intelligence (ChromaDB semantic search + Llama 3 structured output)
+* Day 3: The Magic (Topological graph animations + Evidence drawer)
+* Day 4: Polish & Deploy (Dockerization + UI refinements + AMD Cloud deployment prep)

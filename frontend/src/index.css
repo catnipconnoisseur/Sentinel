@@ -126,6 +126,28 @@ body {
   box-shadow: 0 0 20px var(--accent-glow);
 }
 
+/* ─── Node Entrance Animation ────────────────────────────────── */
+.reasoning-node.node-hidden {
+  opacity: 0;
+  transform: scale(0.7) translateY(15px);
+  pointer-events: none;
+}
+
+.reasoning-node.node-visible {
+  animation: nodeReveal 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes nodeReveal {
+  from {
+    opacity: 0;
+    transform: scale(0.7) translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 .reasoning-node.root_cause {
   border-color: var(--status-critical);
   background: var(--status-critical-bg);
