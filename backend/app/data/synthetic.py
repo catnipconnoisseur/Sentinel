@@ -8,7 +8,7 @@ def generate_manuals():
     
     # We have 4 models: model1, model2, model3, model4
     manuals = {
-        "model1": """# FactoryMind Machine Manual: Model 1
+        "model1": """# Sentinel Machine Manual: Model 1
         
 ## Section 1: Overview
 Model 1 is a heavy-duty industrial lathe designed for continuous operation. It operates optimally at a voltage of 170V. 
@@ -26,7 +26,7 @@ Model 1 is a heavy-duty industrial lathe designed for continuous operation. It o
 - **error4**: Sensor communication failure.
 - **error5**: Emergency stop engaged.
 """,
-        "model2": """# FactoryMind Machine Manual: Model 2
+        "model2": """# Sentinel Machine Manual: Model 2
         
 ## Section 1: Overview
 Model 2 is a high-speed CNC router. Optimal rotation speed is 450 RPM.
@@ -44,7 +44,7 @@ Model 2 is a high-speed CNC router. Optimal rotation speed is 450 RPM.
 - **error4**: Limit switch triggered.
 - **error5**: Lubrication low.
 """,
-        "model3": """# FactoryMind Machine Manual: Model 3
+        "model3": """# Sentinel Machine Manual: Model 3
         
 ## Section 1: Overview
 Model 3 is an automated assembly arm. Requires stable pressure around 100 PSI.
@@ -62,7 +62,7 @@ Model 3 is an automated assembly arm. Requires stable pressure around 100 PSI.
 - **error4**: Logic controller fault.
 - **error5**: Payload dropped.
 """,
-        "model4": """# FactoryMind Machine Manual: Model 4
+        "model4": """# Sentinel Machine Manual: Model 4
         
 ## Section 1: Overview
 Model 4 is a heavy press machine. 

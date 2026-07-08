@@ -104,7 +104,7 @@ export default function InvestigationView() {
           <div className="investigating-pulse justify-center mb-4">
             <div className="dot" /><div className="dot" /><div className="dot" />
           </div>
-          <p className="text-[var(--text-primary)] font-medium">FactoryMind is investigating...</p>
+          <p className="text-[var(--text-primary)] font-medium">Sentinel is investigating...</p>
           <p className="text-xs text-[var(--text-muted)] mt-2">Retrieving evidence from telemetry, logs, maintenance records, and manuals</p>
         </div>
       )}

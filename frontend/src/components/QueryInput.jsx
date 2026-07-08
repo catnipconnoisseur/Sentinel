@@ -1,5 +1,5 @@
 /**
- * QueryInput — "Ask FactoryMind" input with submit button.
+ * QueryInput — "Ask Sentinel" input with submit button.
  * Prominent, centered, with keyboard shortcut hint.
  */
 
@@ -27,7 +27,7 @@ export default function QueryInput({ onSubmit, loading }) {
           type="text"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Ask FactoryMind — e.g. 'Why did this machine fail yesterday?'"
+          placeholder="Ask Sentinel — e.g. 'Why did this machine fail yesterday?'"
           disabled={loading}
           className="w-full pl-12 pr-32 py-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm placeholder:text-[var(--text-muted)] focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all disabled:opacity-50"
         />

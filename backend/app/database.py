@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker, DeclarativeBase
 import os
 
 DATABASE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
-DATABASE_URL = f"sqlite:///{os.path.join(DATABASE_DIR, 'factorymind.db')}"
+DATABASE_URL = f"sqlite:///{os.path.join(DATABASE_DIR, 'sentinel.db')}"
 
 engine = create_engine(
     DATABASE_URL,

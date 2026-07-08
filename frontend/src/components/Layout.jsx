@@ -21,7 +21,7 @@ export default function Layout() {
               </svg>
             </div>
             <span className="text-lg font-bold text-[var(--text-primary)] tracking-tight">
-              Factory<span className="text-indigo-400">Mind</span>
+              Senti<span className="text-indigo-400">nel</span>
             </span>
           </Link>
 

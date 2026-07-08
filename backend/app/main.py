@@ -1,5 +1,5 @@
 """
-FactoryMind API — FastAPI application entry point.
+Sentinel API — FastAPI application entry point.
 
 Run with: uvicorn app.main:app --reload --port 8000
 """
@@ -20,7 +20,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="FactoryMind",
+    title="Sentinel",
     description="AI reasoning engine for industrial investigations",
     version="0.1.0",
     lifespan=lifespan,
@@ -42,4 +42,4 @@ app.include_router(investigation.router, prefix="/api")
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "ok", "service": "factorymind"}
+    return {"status": "ok", "service": "sentinel"}

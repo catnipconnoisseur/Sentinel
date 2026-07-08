@@ -1,5 +1,5 @@
 """
-SQLAlchemy ORM models for the FactoryMind database.
+SQLAlchemy ORM models for the Sentinel database.
 
 Maps directly to the Microsoft Predictive Maintenance dataset:
 - Machine      → PdM_machines.csv
