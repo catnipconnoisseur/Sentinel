@@ -36,13 +36,9 @@ var/
 .installed.cfg
 *.egg
 
-# Databases & local data
+# Generated databases & indexes (regenerable — run setup.sh)
 *.db
-backend/data/
-backend/app/data/factorymind.db
-backend/app/data/manuals/
-backend/app/data/chromadb/
-backend/app/data/PdM_*.csv
+backend/data/chromadb/
 
 # Environment variables
 .env

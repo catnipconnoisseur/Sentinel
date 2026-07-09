@@ -43,6 +43,17 @@ app.include_router(machines.router, prefix="/api")
 app.include_router(investigation.router, prefix="/api")
 
 
+from pydantic import BaseModel
+
+class LogPayload(BaseModel):
+    level: str
+    message: str
+
+@app.post("/api/log")
+async def client_log(payload: LogPayload):
+    print(f"[CLIENT_{payload.level.upper()}] {payload.message}")
+    return {"status": "ok"}
+
 @app.get("/api/health")
 async def health_check():
     return {"status": "ok", "service": "sentinel"}

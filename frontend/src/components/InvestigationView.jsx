@@ -31,15 +31,65 @@ export default function InvestigationView() {
   const [machine, setMachine] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedNode, setSelectedNode] = useState(null);
+  const [loadingStep, setLoadingStep] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  const { result, loading: investigating, error: investigationError, investigate } = useInvestigation(id);
+  const steps = [
+    "Starting investigation...",
+    "Retrieving telemetry data...",
+    "Reviewing maintenance history...",
+    "Searching technical documentation...",
+    "Analyzing evidence...",
+    "Building reasoning graph..."
+  ];
+
+  const { result, loading: investigating, error: investigationError, investigate, retry, cancel, lastQuestion } = useInvestigation(id);
+
+  // loading-step progression
+  useEffect(() => {
+    console.info(`[frontend][investigation-view] loading-step ${investigating ? 'start' : 'stop'} machineId=${id} step=${loadingStep}`);
+    if (!investigating) {
+      setLoadingStep(0);
+      return;
+    }
+    
+    const interval = setInterval(() => {
+      setLoadingStep((prev) => (prev < steps.length - 1 ? prev + 1 : prev));
+    }, 1500);
+    
+    return () => clearInterval(interval);
+  }, [investigating]);
+
+  // elapsed timer
+  useEffect(() => {
+    if (!investigating) {
+      setElapsedSeconds(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [investigating]);
 
   useEffect(() => {
+    const startedAt = performance.now();
+    console.info(`[frontend][machine-load] start machineId=${id}`);
     setLoading(true);
     api.getMachine(id)
-      .then(setMachine)
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      .then((data) => {
+        console.info(`[frontend][machine-load] success machineId=${id} durationMs=${Math.round(performance.now() - startedAt)}`);
+        setMachine(data);
+      })
+      .catch((error) => {
+        console.error(`[frontend][machine-load] failure machineId=${id} durationMs=${Math.round(performance.now() - startedAt)}`, error);
+      })
+      .finally(() => {
+        console.info(`[frontend][machine-load] loading cleared machineId=${id} durationMs=${Math.round(performance.now() - startedAt)}`);
+        setLoading(false);
+      });
   }, [id]);
 
   if (loading) {
@@ -100,19 +150,88 @@ export default function InvestigationView() {
 
       {/* ─── Investigation Loading State ─────────────── */}
       {investigating && (
-        <div className="glass-card p-8 mb-6 text-center">
-          <div className="investigating-pulse justify-center mb-4">
-            <div className="dot" /><div className="dot" /><div className="dot" />
+        <div className="glass-card p-8 mb-6 relative overflow-hidden">
+          <div className="flex flex-col items-center justify-center mb-6">
+            <div className="investigating-pulse mb-3">
+              <div className="dot" /><div className="dot" /><div className="dot" />
+            </div>
+            <p className="text-base font-semibold text-[var(--text-primary)]">
+              Sentinel is investigating...
+            </p>
+            <span className="text-xs text-[var(--text-muted)] mt-1 font-mono">
+              Elapsed: {elapsedSeconds}s
+            </span>
           </div>
-          <p className="text-[var(--text-primary)] font-medium">Sentinel is investigating...</p>
-          <p className="text-xs text-[var(--text-muted)] mt-2">Retrieving evidence from telemetry, logs, maintenance records, and manuals</p>
+          <div className="max-w-md mx-auto space-y-2.5 bg-[var(--bg-primary)] p-5 rounded-xl border border-[var(--border-subtle)]">
+            {steps.map((step, idx) => {
+              const isCompleted = loadingStep > idx;
+              const isActive = loadingStep === idx;
+              
+              return (
+                <div key={idx} className="flex items-center gap-3 text-xs">
+                  {isCompleted ? (
+                    <span className="text-emerald-400 font-bold w-4 text-center">✓</span>
+                  ) : isActive ? (
+                    <span className="status-dot healthy animate-pulse w-2 h-2 mx-1" />
+                  ) : (
+                    <span className="text-[var(--text-muted)] w-4 text-center">•</span>
+                  )}
+                  <span className={isCompleted ? "text-[var(--text-secondary)] line-through opacity-70" : isActive ? "text-[var(--text-primary)] font-medium" : "text-[var(--text-muted)]"}>
+                    {step}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex justify-center mt-6">
+            <button
+              onClick={cancel}
+              className="px-4 py-2 text-xs font-semibold text-red-400 border border-red-500/30 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+            >
+              Cancel Investigation
+            </button>
+          </div>
+        </div>
+      )}
+
+      {investigating && (
+        <div className="sr-only" aria-live="polite">
+          {steps[loadingStep]} (elapsed: {elapsedSeconds} seconds)
         </div>
       )}
 
       {/* ─── Investigation Error ──────────────────────── */}
       {investigationError && (
-        <div className="glass-card p-4 mb-6 border-red-500/30">
-          <p className="text-red-400 text-sm">⚠️ Investigation failed: {investigationError}</p>
+        <div className="glass-card p-6 mb-6 border-red-500/30 bg-red-500/5">
+          <div className="flex items-start gap-3">
+            <span className="text-xl">⚠️</span>
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold text-red-400">Investigation Failed</h4>
+              <p className="text-xs text-[var(--text-secondary)] mt-1 leading-relaxed">
+                {investigationError}
+              </p>
+              {lastQuestion && (
+                <div className="mt-4 flex gap-3">
+                  <button
+                    onClick={retry}
+                    className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg hover:shadow-lg hover:shadow-indigo-500/25 transition-all cursor-pointer border-none"
+                  >
+                    Retry Investigation
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Programmatically re-run investigation with a default or slightly modified prompt
+                      investigate(lastQuestion);
+                    }}
+                    className="px-4 py-2 text-xs font-semibold text-[var(--text-secondary)] border border-[var(--border-subtle)] hover:bg-[var(--bg-primary)] rounded-lg transition-colors cursor-pointer"
+                    style={{ display: 'none' }} /* Hidden, just keeping structure */
+                  >
+                    Try Again
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

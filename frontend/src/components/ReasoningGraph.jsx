@@ -7,6 +7,9 @@
  * fade-in-scale effect. Edges appear after both their source and target nodes
  * are visible. This creates the illusion of the AI "building" its reasoning
  * chain in real-time — the single most impactful demo moment.
+ *
+ * IMPORTANT: All hooks must be called unconditionally (React Rules of Hooks).
+ * The early-return for !investigation is placed AFTER all hooks.
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -26,7 +29,6 @@ function ReasoningNodeComponent({ data }) {
     <div
       className={`reasoning-node ${data.type} ${data.visible ? 'node-visible' : 'node-hidden'}`}
       onClick={data.onClick}
-      style={{ animationDelay: `${data.animDelay}ms` }}
     >
       <Handle type="target" position={Position.Top} style={{ background: '#6366f1', border: 'none', width: 8, height: 8 }} />
       <div className="flex items-center gap-2 mb-1">
@@ -58,12 +60,16 @@ const typeIcons = {
 // ─── Layout Helper (simple top-down) ────────────────────────────
 
 function layoutNodes(nodes, edges) {
+  if (!nodes || nodes.length === 0) return { positions: {}, layers: [], nodeLayerMap: {} };
+
   // Build adjacency for simple layering
   const inDegree = {};
   const children = {};
   nodes.forEach((n) => { inDegree[n.id] = 0; children[n.id] = []; });
   edges.forEach((e) => {
-    inDegree[e.target] = (inDegree[e.target] || 0) + 1;
+    if (inDegree[e.target] !== undefined) {
+      inDegree[e.target] = (inDegree[e.target] || 0) + 1;
+    }
     if (children[e.source]) children[e.source].push(e.target);
   });
 
@@ -71,6 +77,11 @@ function layoutNodes(nodes, edges) {
   const layers = [];
   const visited = new Set();
   let current = nodes.filter((n) => inDegree[n.id] === 0).map((n) => n.id);
+
+  // Safety: if no root nodes (cyclic graph), start from all nodes
+  if (current.length === 0) {
+    current = nodes.map((n) => n.id);
+  }
 
   while (current.length > 0) {
     layers.push(current);
@@ -120,6 +131,10 @@ const edgeColors = {
   led_to: '#f59e0b',
   correlated_with: '#8b5cf6',
   indicates: '#3b82f6',
+  causes: '#ef4444',
+  contributes_to: '#8b5cf6',
+  evidence_of: '#3b82f6',
+  requires: '#10b981',
 };
 
 // ─── Animation Constants ────────────────────────────────────────
@@ -130,48 +145,75 @@ const EDGE_REVEAL_DELAY = 250;     // ms after a node layer before its edges sho
 // ─── Main Component ─────────────────────────────────────────────
 
 export default function ReasoningGraph({ investigation, onNodeClick }) {
-  if (!investigation) return null;
-
+  // ── ALL HOOKS must be declared unconditionally before any early return ──
   const [visibleNodeIds, setVisibleNodeIds] = useState(new Set());
   const [visibleEdgeIds, setVisibleEdgeIds] = useState(new Set());
-  const prevInvestigationRef = useRef(null);
+  // Use a stable key derived from the investigation DATA, not object identity.
+  // This avoids false cleanup triggers from parent re-renders.
+  const investigationKey = investigation
+    ? `${investigation.nodes?.length ?? 0}-${investigation.edges?.length ?? 0}-${investigation.nodes?.[0]?.id ?? ''}`
+    : null;
+  const prevKeyRef = useRef(null);
+  const timersRef = useRef([]);
+  const graphTraceId = useRef('graph-none');
+  graphTraceId.current = `graph-${investigationKey ?? 'none'}`;
 
   const { positions, layers, nodeLayerMap } = useMemo(
-    () => layoutNodes(investigation.nodes, investigation.edges),
-    [investigation]
+    () => layoutNodes(investigation?.nodes ?? [], investigation?.edges ?? []),
+    [investigationKey]  // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   // ─── Staggered reveal animation ────────────────────────────
   useEffect(() => {
-    // Only animate if this is a new investigation result
-    if (prevInvestigationRef.current === investigation) return;
-    prevInvestigationRef.current = investigation;
+    if (!investigation || !investigationKey) return;
 
-    // Reset
+    // Only animate if this is genuinely a new investigation result
+    if (prevKeyRef.current === investigationKey) return;
+    prevKeyRef.current = investigationKey;
+
+    // Clear any timers from a previous investigation
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+
+    console.info(`[frontend][reasoning-graph] animation start trace=${graphTraceId.current} layers=${layers.length} nodeCount=${investigation.nodes.length} edgeCount=${investigation.edges.length}`);
+
+    // Reset visibility
     setVisibleNodeIds(new Set());
     setVisibleEdgeIds(new Set());
 
-    const timers = [];
+    if (layers.length === 0) {
+      // Safety: if layout failed, reveal everything immediately
+      console.info(`[frontend][reasoning-graph] layout fallback trace=${graphTraceId.current} nodeCount=${investigation.nodes.length} edgeCount=${investigation.edges.length}`);
+      setVisibleNodeIds(new Set(investigation.nodes.map((n) => n.id)));
+      setVisibleEdgeIds(new Set(investigation.edges.map((_, i) => `e-${i}`)));
+      return;
+    }
+
+    // Snapshot the data we need for timers so closures don't capture stale refs
+    const nodeLayerMapSnap = { ...nodeLayerMap };
+    const edgesSnap = investigation.edges.slice();
+    const traceId = graphTraceId.current;
 
     layers.forEach((layerNodeIds, layerIdx) => {
       // Reveal this layer's nodes
       const nodeTimer = setTimeout(() => {
+        console.info(`[frontend][reasoning-graph] layer reveal trace=${traceId} layer=${layerIdx} nodes=${layerNodeIds.join(',')}`);
         setVisibleNodeIds((prev) => {
           const next = new Set(prev);
           layerNodeIds.forEach((id) => next.add(id));
           return next;
         });
       }, layerIdx * NODE_REVEAL_INTERVAL);
-      timers.push(nodeTimer);
+      timersRef.current.push(nodeTimer);
 
       // Reveal edges that connect to this layer (after a short delay)
       const edgeTimer = setTimeout(() => {
+        console.info(`[frontend][reasoning-graph] edge reveal trace=${traceId} layer=${layerIdx}`);
         setVisibleEdgeIds((prev) => {
           const next = new Set(prev);
-          investigation.edges.forEach((edge, i) => {
-            const sourceLayer = nodeLayerMap[edge.source];
-            const targetLayer = nodeLayerMap[edge.target];
-            // Show edge only if both nodes are in revealed layers
+          edgesSnap.forEach((edge, i) => {
+            const sourceLayer = nodeLayerMapSnap[edge.source];
+            const targetLayer = nodeLayerMapSnap[edge.target];
             if (sourceLayer !== undefined && targetLayer !== undefined &&
                 sourceLayer <= layerIdx && targetLayer <= layerIdx) {
               next.add(`e-${i}`);
@@ -180,71 +222,76 @@ export default function ReasoningGraph({ investigation, onNodeClick }) {
           return next;
         });
       }, layerIdx * NODE_REVEAL_INTERVAL + EDGE_REVEAL_DELAY);
-      timers.push(edgeTimer);
+      timersRef.current.push(edgeTimer);
     });
 
-    return () => timers.forEach(clearTimeout);
-  }, [investigation, layers, nodeLayerMap]);
+    // NOTE: We intentionally do NOT return a cleanup function here.
+    // Returning cleanup would cancel the timers on every parent re-render
+    // (e.g. the elapsed-seconds ticker in InvestigationView), preventing
+    // nodes from ever becoming visible. Timers are cleared manually at the
+    // top of this effect when a genuinely new investigation arrives.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [investigationKey]);
 
   // ─── Build React Flow data ─────────────────────────────────
 
-  const flowNodes = useMemo(() =>
-    investigation.nodes.map((node) => {
-      const layerIdx = nodeLayerMap[node.id] || 0;
-      return {
-        id: node.id,
-        type: 'reasoning',
-        position: positions[node.id] || { x: 0, y: 0 },
-        hidden: !visibleNodeIds.has(node.id),
-        data: {
-          label: node.label,
-          type: node.type,
-          icon: typeIcons[node.type] || '⚪',
-          confidence: node.confidence,
-          evidenceCount: node.evidence?.length || 0,
-          visible: visibleNodeIds.has(node.id),
-          animDelay: 0,
-          onClick: () => onNodeClick?.(node),
-        },
-      };
-    }),
-    [investigation, positions, onNodeClick, visibleNodeIds, nodeLayerMap]
-  );
+  const flowNodes = useMemo(() => {
+    if (!investigation) return [];
+    return investigation.nodes.map((node) => ({
+      id: node.id,
+      type: 'reasoning',
+      position: positions[node.id] || { x: 0, y: 0 },
+      data: {
+        label: node.label,
+        type: node.type,
+        icon: typeIcons[node.type] || '⚪',
+        confidence: node.confidence,
+        evidenceCount: node.evidence?.length || 0,
+        visible: visibleNodeIds.has(node.id),
+        onClick: () => onNodeClick?.(node),
+      },
+    }));
+  }, [investigationKey, positions, onNodeClick, visibleNodeIds]);  // eslint-disable-line react-hooks/exhaustive-deps
 
-  const flowEdges = useMemo(() =>
-    investigation.edges.map((edge, i) => {
+  const flowEdges = useMemo(() => {
+    if (!investigation) return [];
+    return investigation.edges.map((edge, i) => {
       const edgeId = `e-${i}`;
+      const isVisible = visibleEdgeIds.has(edgeId);
       return {
         id: edgeId,
         source: edge.source,
         target: edge.target,
-        label: edge.relationship?.replace('_', ' '),
+        label: edge.relationship?.replace(/_/g, ' '),
         animated: true,
-        hidden: !visibleEdgeIds.has(edgeId),
         style: {
           stroke: edgeColors[edge.relationship] || '#6366f1',
           strokeWidth: 2,
-          opacity: visibleEdgeIds.has(edgeId) ? 1 : 0,
+          opacity: isVisible ? 1 : 0,
           transition: 'opacity 0.4s ease',
         },
         labelStyle: {
           fill: 'var(--text-muted)',
           fontSize: 10,
           fontWeight: 500,
-          opacity: visibleEdgeIds.has(edgeId) ? 1 : 0,
+          opacity: isVisible ? 1 : 0,
           transition: 'opacity 0.4s ease',
         },
         labelBgStyle: {
           fill: 'var(--bg-card)',
-          fillOpacity: visibleEdgeIds.has(edgeId) ? 0.9 : 0,
+          fillOpacity: isVisible ? 0.9 : 0,
         },
       };
-    }),
-    [investigation, visibleEdgeIds]
-  );
+    });
+  }, [investigationKey, visibleEdgeIds]);  // eslint-disable-line react-hooks/exhaustive-deps
 
-  const animationProgress = layers.length > 0
-    ? Math.round((visibleNodeIds.size / investigation.nodes.length) * 100)
+
+  // ─── Early return AFTER all hooks ──────────────────────────
+  if (!investigation) return null;
+
+  const totalNodes = investigation.nodes.length;
+  const animationProgress = totalNodes > 0
+    ? Math.round((visibleNodeIds.size / totalNodes) * 100)
     : 100;
 
   return (

@@ -3,144 +3,43 @@ Investigation API endpoint.
 
 POST /api/investigate — Takes a machine_id and question, returns reasoning graph.
 
-For now, returns a mock investigation result.
-This will be connected to the RAG + Fireworks AI pipeline in Milestone 12.
+Architecture note:
+  retrieve_evidence() and generate_reasoning_graph() are synchronous / CPU+IO bound.
+  They must be run in a thread-pool executor so they don't block the asyncio event loop.
+  Without this, a second request cannot be processed while Fireworks is in flight,
+  causing the "stuck on Reasoning..." symptom for all subsequent investigations.
 """
 
+import asyncio
 import os
-from fastapi import APIRouter, Depends
+import time
+from datetime import datetime, timezone
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.schemas import InvestigationRequest, InvestigationResult, ReasoningNode, ReasoningEdge, EvidenceItem
+from app.schemas import InvestigationRequest, InvestigationResult
 from app.services.retriever import retrieve_evidence
 from app.services.reasoner import generate_reasoning_graph
 
 router = APIRouter(tags=["investigation"])
 
+# Total wall-clock budget for one investigation (retrieve + reason × up to 2 attempts).
+# Fireworks SDK timeout is 30s per attempt; 2 attempts = 60s, +15s headroom = 75s.
+INVESTIGATION_TIMEOUT_SECONDS = 75
 
-def _mock_investigation(machine_id: int, question: str) -> InvestigationResult:
-    """
-    Returns a realistic mock investigation result for development.
-    This lets the frontend team build the graph visualization immediately
-    without waiting for the AI pipeline.
-    """
-    return InvestigationResult(
-        summary=f"Investigation of Machine {machine_id}: Analysis indicates a cascading failure originating from bearing degradation in Component 3, accelerated by missed scheduled maintenance and abnormal vibration patterns detected over the past 72 hours.",
-        root_cause="Bearing wear in Component 3 due to overdue maintenance",
-        nodes=[
-            ReasoningNode(
-                id="failure",
-                label="Machine Failure",
-                type="symptom",
-                description=f"Machine {machine_id} experienced an unplanned shutdown",
-                evidence=[
-                    EvidenceItem(
-                        source="failure_history",
-                        description=f"Machine {machine_id} failure recorded — comp3 failure",
-                        timestamp="2015-07-15T06:00:00",
-                    )
-                ],
-                confidence=1.0,
-            ),
-            ReasoningNode(
-                id="vibration_anomaly",
-                label="Abnormal Vibration",
-                type="symptom",
-                description="Vibration readings exceeded normal operating range (>45 units) for 48+ hours before failure",
-                evidence=[
-                    EvidenceItem(
-                        source="telemetry",
-                        description="Vibration peaked at 62.3 units, normal range is 35-42",
-                        timestamp="2015-07-14T18:00:00",
-                        data={"metric": "vibration", "value": 62.3, "threshold": 42},
-                    )
-                ],
-                confidence=0.95,
-            ),
-            ReasoningNode(
-                id="bearing_wear",
-                label="Bearing Wear",
-                type="root_cause",
-                description="Component 3 bearings showed progressive degradation pattern consistent with metal fatigue",
-                evidence=[
-                    EvidenceItem(
-                        source="manual",
-                        description="Machine manual Section 4.2: comp3 bearings require replacement every 18 months under standard load",
-                    ),
-                    EvidenceItem(
-                        source="maintenance",
-                        description="Last comp3 maintenance was 22 months ago",
-                        timestamp="2015-01-05T00:00:00",
-                    ),
-                ],
-                confidence=0.91,
-            ),
-            ReasoningNode(
-                id="maintenance_overdue",
-                label="Maintenance Overdue",
-                type="contributing_factor",
-                description="Scheduled maintenance for comp3 was 4 months overdue",
-                evidence=[
-                    EvidenceItem(
-                        source="maintenance",
-                        description="Maintenance schedule shows comp3 service due at month 18, currently at month 22",
-                        timestamp="2015-01-05T00:00:00",
-                    )
-                ],
-                confidence=0.88,
-            ),
-            ReasoningNode(
-                id="pressure_drop",
-                label="Pressure Drop",
-                type="symptom",
-                description="System pressure dropped 15% in the 24 hours before failure",
-                evidence=[
-                    EvidenceItem(
-                        source="telemetry",
-                        description="Pressure dropped from 102.1 to 86.8 PSI",
-                        timestamp="2015-07-15T00:00:00",
-                        data={"metric": "pressure", "value": 86.8, "threshold": 95},
-                    )
-                ],
-                confidence=0.82,
-            ),
-            ReasoningNode(
-                id="error_signals",
-                label="Error Signals",
-                type="evidence",
-                description="Multiple error codes logged in the 48 hours before failure",
-                evidence=[
-                    EvidenceItem(
-                        source="error_log",
-                        description="error1 logged 3 times, error3 logged 2 times",
-                        timestamp="2015-07-14T12:00:00",
-                    )
-                ],
-                confidence=0.85,
-            ),
-            ReasoningNode(
-                id="recommendation",
-                label="Recommended Action",
-                type="recommendation",
-                description="Replace comp3 bearings immediately and recalibrate vibration sensors",
-                evidence=[],
-                confidence=0.91,
-            ),
-        ],
-        edges=[
-            ReasoningEdge(source="maintenance_overdue", target="bearing_wear", relationship="caused_by"),
-            ReasoningEdge(source="bearing_wear", target="vibration_anomaly", relationship="led_to"),
-            ReasoningEdge(source="bearing_wear", target="pressure_drop", relationship="led_to"),
-            ReasoningEdge(source="vibration_anomaly", target="failure", relationship="led_to"),
-            ReasoningEdge(source="pressure_drop", target="failure", relationship="led_to"),
-            ReasoningEdge(source="error_signals", target="failure", relationship="indicates"),
-            ReasoningEdge(source="failure", target="recommendation", relationship="led_to"),
-        ],
-        recommendation="1. Immediately replace Component 3 bearings.\n2. Inspect adjacent components for collateral wear.\n3. Reset maintenance schedule to 16-month intervals for this machine model given its age.\n4. Install vibration threshold alerts at 45 units to catch early degradation.",
-        confidence=0.91,
-        sources_consulted=["telemetry", "error_log", "maintenance", "failure_history", "manual"],
-    )
+
+def _ts():
+    return datetime.now(timezone.utc).isoformat(timespec="milliseconds")
+
+
+def _log_stage(trace_id: str, stage_num: int, stage_name: str, state: str, started_at: Optional[float] = None, extra: str = ""):
+    duration = ""
+    if started_at is not None:
+        duration = f" duration={time.perf_counter() - started_at:.3f}s"
+    suffix = f" {extra}" if extra else ""
+    print(f"{_ts()} trace={trace_id} [{stage_num}] {stage_name} {state}{duration}{suffix}")
 
 
 @router.post("/investigate", response_model=InvestigationResult)
@@ -150,18 +49,92 @@ async def investigate(request: InvestigationRequest, db: Session = Depends(get_d
 
     Uses RAG to retrieve structural and unstructured evidence, then
     calls Fireworks AI to generate the structured reasoning graph.
+
+    Both blocking operations (retrieve_evidence, generate_reasoning_graph)
+    are dispatched to a thread-pool executor so the asyncio event loop
+    remains free to handle additional HTTP requests while Fireworks responds.
     """
+    trace_id = f"inv-{int(time.time() * 1000)}-{request.machine_id}"
+    request_started_at = time.perf_counter()
+    _log_stage(trace_id, 1, "Investigation request received", "start", request_started_at, f"machine_id={request.machine_id}")
+
     api_key = os.environ.get("FIREWORKS_API_KEY")
     if not api_key or api_key == "your_key_here":
-        print("WARN: FIREWORKS_API_KEY not set. Using mock investigation data.")
-        return _mock_investigation(request.machine_id, request.question)
+        _log_stage(trace_id, 1, "Investigation request received", "failure", request_started_at, "reason=missing_fireworks_api_key")
+        raise HTTPException(status_code=500, detail="FIREWORKS_API_KEY is not set.")
 
-    print(f"Starting investigation for Machine {request.machine_id}...")
-    
-    # 1. Retrieve evidence context (SQLite + ChromaDB)
-    context = retrieve_evidence(db, request.machine_id, request.question)
-    
-    # 2. Call Fireworks AI to reason over the context
-    result = generate_reasoning_graph(context, request.question)
-    
+    _log_stage(trace_id, 1, "Investigation request received", "success", request_started_at, f"question={request.question!r}")
+
+    loop = asyncio.get_event_loop()
+
+    try:
+        async def _run_pipeline():
+            # 1. Retrieve evidence context (SQLite + ChromaDB) — blocking, run in thread pool
+            stage_started_at = time.perf_counter()
+            _log_stage(trace_id, 2, "Evidence retrieval", "start", stage_started_at)
+            context = await loop.run_in_executor(
+                None,
+                lambda: retrieve_evidence(db, request.machine_id, request.question, trace_id=trace_id),
+            )
+            _log_stage(trace_id, 2, "Evidence retrieval", "success", stage_started_at, f"context_chars={len(context)}")
+
+            # 2. Call Fireworks AI with a 1-retry fallback for transient network issues
+            stage_started_at = time.perf_counter()
+            _log_stage(trace_id, 3, "Reasoning graph generation", "start", stage_started_at)
+            
+            max_attempts = 2
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    result = await loop.run_in_executor(
+                        None,
+                        lambda: generate_reasoning_graph(context, request.question, trace_id=trace_id),
+                    )
+                    break
+                except (TimeoutError, ConnectionError) as e:
+                    if attempt < max_attempts:
+                        print(
+                            f"{_ts()} trace={trace_id} [RETRY] Fireworks call attempt {attempt} failed: {e}. "
+                            "Retrying next attempt in 2 seconds..."
+                        )
+                        await asyncio.sleep(2.0)
+                        continue
+                    else:
+                        raise
+
+            _log_stage(trace_id, 3, "Reasoning graph generation", "success", stage_started_at, f"nodes={len(result.nodes)} edges={len(result.edges)}")
+            return result
+
+        result = await asyncio.wait_for(_run_pipeline(), timeout=INVESTIGATION_TIMEOUT_SECONDS)
+
+    except asyncio.TimeoutError:
+        elapsed = time.perf_counter() - request_started_at
+        print(
+            f"{_ts()} trace={trace_id} [TIMEOUT] Investigation exceeded {INVESTIGATION_TIMEOUT_SECONDS}s budget "
+            f"elapsed={elapsed:.3f}s machine_id={request.machine_id}"
+        )
+        raise HTTPException(
+            status_code=504,
+            detail=(
+                f"The investigation timed out after {INVESTIGATION_TIMEOUT_SECONDS} seconds. "
+                "Fireworks AI may be slow or unavailable. Please retry."
+            ),
+        )
+    except TimeoutError as e:
+        # Re-raised from generate_reasoning_graph when Fireworks SDK times out
+        print(f"{_ts()} trace={trace_id} [TIMEOUT] Fireworks SDK timeout error={e}")
+        raise HTTPException(status_code=504, detail=str(e))
+    except ConnectionError as e:
+        print(f"{_ts()} trace={trace_id} [CONNECTION] Fireworks connection error error={e}")
+        raise HTTPException(status_code=502, detail=str(e))
+    except ValueError as e:
+        print(f"{_ts()} trace={trace_id} [PARSE_ERROR] error={e}")
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        elapsed = time.perf_counter() - request_started_at
+        print(f"{_ts()} trace={trace_id} [ERROR] Unexpected error elapsed={elapsed:.3f}s error={e}")
+        raise HTTPException(status_code=500, detail=f"Investigation failed: {str(e)}")
+
+    elapsed = time.perf_counter() - request_started_at
+    _log_stage(trace_id, 4, "Backend response", "success", request_started_at,
+               f"status=200 total_duration={elapsed:.3f}s nodes={len(result.nodes)} edges={len(result.edges)}")
     return result
