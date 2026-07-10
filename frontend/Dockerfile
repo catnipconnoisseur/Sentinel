@@ -19,8 +19,11 @@ RUN npm run build
 FROM nginx:alpine
 # Copy the built output
 COPY --from=build /app/dist /usr/share/nginx/html
-# Copy custom nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy custom nginx configuration template
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+
+# Default fallback environment variable for local container boots
+ENV BACKEND_URL=http://backend:8000/api/
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
