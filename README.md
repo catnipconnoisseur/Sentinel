@@ -81,24 +81,36 @@ docker-compose up --build
 ```
 *The app will be available at http://localhost*
 
-### Manual Setup (Without Docker)
+## 🚀 Deployment
 
-**Backend:**
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-export FIREWORKS_API_KEY=your_key_here
-uvicorn app.main:app --reload --port 8000
-```
+Sentinel is designed for a "one-click" deployment. The database and knowledge base automatically bootstrap themselves the first time the backend container starts.
 
-**Frontend:**
-```bash
-cd frontend
-npm install
-npm run dev
-```
+### Local or VM Deployment (AMD Developer Cloud)
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/catnipconnoisseur/Sentinel.git
+   cd Sentinel
+   ```
+
+2. Run the deployment script:
+   ```bash
+   ./deploy.sh
+   ```
+   *The script will prompt you for your `FIREWORKS_API_KEY` if it is not found in a `.env` file.*
+
+3. Access the application at `http://localhost` (or your VM's IP address).
+
+### Cloud Deployment (Railway)
+
+We recommend [Railway](https://railway.app/) for a hassle-free public URL:
+
+1. Connect your GitHub repository to Railway.
+2. Railway will automatically detect the `docker-compose.yml` file and provision the `frontend` and `backend` services.
+3. In the Railway dashboard, go to the **Variables** tab for the `backend` service and add:
+   * `FIREWORKS_API_KEY=your_api_key_here`
+4. Add a custom domain to the `frontend` service in Railway settings.
+5. Deployment is complete! The first startup will take ~15 seconds extra as the AI indexes the factory manuals into ChromaDB.
 
 ## Hackathon Milestones Completed ✅
 We meticulously planned and executed this project over a strict 4-day timeline.

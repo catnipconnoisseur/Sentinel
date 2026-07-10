@@ -31,7 +31,7 @@ def get_client():
         _client = OpenAI(
             base_url="https://api.fireworks.ai/inference/v1",
             api_key=api_key,
-            timeout=30.0,
+            timeout=40.0,
             max_retries=0
         )
     return _client
@@ -39,17 +39,18 @@ def get_client():
 # Using glm-5p2 for optimized latency and accurate schema validation
 MODEL = "accounts/fireworks/models/glm-5p2"
 
-# Request timeout in seconds — prevents indefinite hangs (openai SDK default = 10 min)
-FIREWORKS_TIMEOUT_SECONDS = 30
+# Request timeout in seconds — prevents indefinite hangs
+FIREWORKS_TIMEOUT_SECONDS = 40
 
-# Token cap — must be high enough to fit a complete JSON response.
-# With strict=False, the model no longer enters repetition loops, so 2000 tokens is sufficient
-# for a complete 5-node reasoning graph. Recovery parser handles any rare truncated responses.
-FIREWORKS_MAX_TOKENS = 2000
+# Token cap — must be high enough to fit reasoning + JSON response.
+FIREWORKS_MAX_TOKENS = 4096
 
 SYSTEM_PROMPT = """
 You are Sentinel, an AI industrial reliability engineer performing root-cause analysis.
 Analyze the machine data and RAG documents provided, then output a compact JSON reasoning graph.
+
+THINKING/REASONING RULE:
+- Your internal reasoning/thinking process MUST be extremely concise and direct (under 100 words total). Do not write long essays in your thinking.
 
 GRAPH RULES (strictly enforced):
 - Output EXACTLY 4 nodes and 3 edges. No more, no less.
@@ -65,6 +66,7 @@ EVIDENCE RULES (strictly enforced):
 
 EDGES: use only 'caused_by', 'led_to', 'correlated_with', 'indicates'.
 """
+
 
 def _parse_with_recovery(raw: str, finish_reason: Optional[str], trace_id: str) -> InvestigationResult:
     """

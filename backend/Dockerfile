@@ -17,5 +17,8 @@ COPY . .
 # Ensure the app starts on port 8000
 EXPOSE 8000
 
-# Start FastAPI using Uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Make entrypoint executable
+RUN chmod +x /app/entrypoint.sh
+
+# Start using entrypoint to bootstrap data
+ENTRYPOINT ["/app/entrypoint.sh"]
