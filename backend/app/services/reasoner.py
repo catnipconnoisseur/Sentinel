@@ -43,33 +43,79 @@ MODEL = "accounts/fireworks/models/glm-5p2"
 FIREWORKS_TIMEOUT_SECONDS = 30
 
 # Token cap — must be high enough to fit a complete JSON response.
-# 1000 was too low: finish_reason=length truncated JSON mid-stream causing 75% failure rate.
-# Model stops early when JSON schema is complete, so 2000 does not increase latency on success.
+# With strict=False, the model no longer enters repetition loops, so 2000 tokens is sufficient
+# for a complete 5-node reasoning graph. Recovery parser handles any rare truncated responses.
 FIREWORKS_MAX_TOKENS = 2000
 
 SYSTEM_PROMPT = """
-You are Sentinel, an AI industrial investigation engine.
-Analyze evidence (telemetry, errors, maintenance, manuals) to answer the question.
+You are Sentinel, an AI industrial reliability engineer performing root-cause analysis.
+Analyze the machine data and RAG documents provided, then output a compact JSON reasoning graph.
 
-Generate a compact, explainable JSON "Reasoning Graph" matching the schema.
-Nodes:
-- 'root_cause': Underlying reason.
-- 'symptom': Observable issue (e.g. error, telemetry spike).
-- 'contributing_factor': Contextual factor (e.g. old age, missed maintenance).
-- 'evidence': Raw data citation.
-- 'recommendation': Actionable advice.
+GRAPH RULES (strictly enforced):
+- Output EXACTLY 4 nodes and 3 edges. No more, no less.
+- Use node types: 'symptom', 'contributing_factor', 'root_cause', 'recommendation' — one of each.
+- Keep labels ≤5 words, descriptions ≤15 words.
+- summary and recommendation: ≤25 words each.
 
-CRITICAL COMPACTNESS RULES (To guarantee low latency):
-1. Graph Size: Output exactly 4 to 6 nodes and 3 to 5 edges maximum. Keep the graph highly focused.
-2. Length Caps:
-   - summary: Max 20 words.
-   - recommendation: Max 20 words.
-   - Node label: Max 4 words.
-   - Node description: Max 10 words.
-   - Evidence description: Max 6 words.
-3. Citation: Cite specific timestamps, values, and manuals in the 'evidence' fields.
-4. Confidence: Set confidence scores (0.0 to 1.0) based on evidence strength.
+EVIDENCE RULES (strictly enforced):
+- Each node must have EXACTLY 1 evidence item.
+- ONLY cite documents and values present in the context. Never invent data.
+- For manual/sop/historical_case: set document_title (exact), section (exact), excerpt (≤20 words verbatim).
+- For telemetry/maintenance/error_log: set description with specific value and date from the context.
+
+EDGES: use only 'caused_by', 'led_to', 'correlated_with', 'indicates'.
 """
+
+def _parse_with_recovery(raw: str, finish_reason: Optional[str], trace_id: str) -> InvestigationResult:
+    """
+    Attempts to parse the raw JSON response into InvestigationResult.
+    If the model hit the token limit (finish_reason='length'), the JSON may be truncated.
+    In that case, we try to close the object at the last structurally complete position
+    so we can recover a partial (but valid) result rather than failing entirely.
+    """
+    try:
+        return InvestigationResult.model_validate_json(raw)
+    except Exception as first_err:
+        if finish_reason != "length":
+            # Not a truncation issue — re-raise as validation error
+            raise ValueError("The AI generated an invalid reasoning graph structure. Please try again.") from first_err
+
+        # Try truncation recovery: walk character by character to find the last
+        # position where brace/bracket depth returns to 0 (a complete JSON object).
+        print(f"{_ts()} trace={trace_id} [12] JSON truncation recovery start finish_reason=length")
+        depth = 0
+        in_string = False
+        escape_next = False
+        last_complete_pos = -1
+        for i, ch in enumerate(raw):
+            if escape_next:
+                escape_next = False
+                continue
+            if ch == "\\" and in_string:
+                escape_next = True
+                continue
+            if ch == '"' and not escape_next:
+                in_string = not in_string
+                continue
+            if not in_string:
+                if ch in "{[":
+                    depth += 1
+                elif ch in "}]":
+                    depth -= 1
+                    if depth == 0:
+                        last_complete_pos = i
+
+        if last_complete_pos > 0:
+            recovered = raw[: last_complete_pos + 1]
+            try:
+                result = InvestigationResult.model_validate_json(recovered)
+                print(f"{_ts()} trace={trace_id} [12] JSON truncation recovery success recovered_chars={len(recovered)} nodes={len(result.nodes)}")
+                return result
+            except Exception as recovery_err:
+                print(f"{_ts()} trace={trace_id} [12] JSON truncation recovery failed error={recovery_err}")
+
+        raise ValueError("The AI generated an invalid reasoning graph structure (truncated). Please retry.") from first_err
+
 
 def generate_reasoning_graph(context: str, question: str, trace_id: str = "investigation") -> InvestigationResult:
     """
@@ -98,7 +144,9 @@ def generate_reasoning_graph(context: str, question: str, trace_id: str = "inves
                 "json_schema": {
                     "name": "InvestigationResult",
                     "schema": InvestigationResult.model_json_schema(),
-                    "strict": True # Enforce strict schema constraints at the token generation level to prevent 422 errors
+                    # strict: False — Fireworks strict mode rejects Optional (anyOf: [string, null])
+                    # fields and produces empty model output. Pydantic validates the response server-side.
+                    "strict": False
                 }
             },
             temperature=0.1, # Low temperature for analytical consistency
@@ -120,11 +168,13 @@ def generate_reasoning_graph(context: str, question: str, trace_id: str = "inves
         raw_response = response.model_dump()
         print(f"{_ts()} trace={trace_id} [11] Raw Fireworks response logged success response_body={json.dumps(raw_response, default=str)}")
         
-        # Parse the JSON string back into our Pydantic model
+        # Parse the JSON string back into our Pydantic model.
+        # Use lenient recovery for truncated responses (finish_reason=length).
         parse_started_at = time.perf_counter()
         _log_stage(trace_id, 12, "JSON parsing", "start", parse_started_at)
         result_json = response.choices[0].message.content
-        result = InvestigationResult.model_validate_json(result_json)
+        finish_reason = response.choices[0].finish_reason if response.choices else None
+        result = _parse_with_recovery(result_json, finish_reason, trace_id)
         _log_stage(trace_id, 12, "JSON parsing", "success", parse_started_at, f"nodes={len(result.nodes)} edges={len(result.edges)}")
         _log_stage(trace_id, 13, "Graph nodes generated", "success", parse_started_at, f"node_count={len(result.nodes)} edge_count={len(result.edges)}")
         return result

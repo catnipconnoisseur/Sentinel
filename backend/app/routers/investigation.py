@@ -132,7 +132,7 @@ async def investigate(request: InvestigationRequest, db: Session = Depends(get_d
     except Exception as e:
         elapsed = time.perf_counter() - request_started_at
         print(f"{_ts()} trace={trace_id} [ERROR] Unexpected error elapsed={elapsed:.3f}s error={e}")
-        raise HTTPException(status_code=500, detail=f"Investigation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
     elapsed = time.perf_counter() - request_started_at
     _log_stage(trace_id, 4, "Backend response", "success", request_started_at,

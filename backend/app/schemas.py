@@ -75,10 +75,11 @@ class MachineDetail(MachineBase):
 
 class EvidenceItem(BaseModel):
     """A single piece of evidence supporting a reasoning node."""
-    source: str = Field(description="Data source: telemetry, error_log, maintenance, manual, failure_history")
-    description: str = Field(description="Human-readable description of this evidence")
-    timestamp: Optional[str] = Field(default=None, description="When this evidence occurred")
-    data: Optional[dict] = Field(default=None, description="Raw data for visualization (chart values, etc.)")
+    source: str = Field(description="Data source: telemetry, error_log, maintenance, manual, failure_history, sop, historical_case")
+    description: str = Field(description="Human-readable description of this evidence, including relevant dates or values")
+    document_title: Optional[str] = Field(default=None, description="Title of the referenced technical manual, SOP, or historical case")
+    section: Optional[str] = Field(default=None, description="Section name of the referenced manual, SOP, or case")
+    excerpt: Optional[str] = Field(default=None, description="Direct textual quote from the retrieved document, max 30 words")
 
 
 class ReasoningNode(BaseModel):

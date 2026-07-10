@@ -3,20 +3,26 @@
  * Opens when a graph node is clicked. Shows evidence items with source icons.
  */
 
+import { useMemo } from 'react';
+
 const sourceIcons = {
   telemetry: '📊',
   error_log: '⚠️',
   maintenance: '🔧',
   manual: '📖',
+  sop: '📋',
+  historical_case: '💥',
   failure_history: '💥',
 };
 
 const sourceLabels = {
-  telemetry: 'Telemetry Data',
-  error_log: 'Error Log',
-  maintenance: 'Maintenance Record',
-  manual: 'Machine Manual',
-  failure_history: 'Failure History',
+  telemetry: 'Telemetry Observation',
+  error_log: 'Error Log Entry',
+  maintenance: 'Maintenance Log',
+  manual: 'Technical Manual Guidance',
+  sop: 'Standard Operating Procedure (SOP)',
+  historical_case: 'Historical Precedent / Case',
+  failure_history: 'Failure History Log',
 };
 
 const typeColors = {
@@ -31,6 +37,30 @@ export default function EvidenceDrawer({ node, onClose }) {
   if (!node) return null;
 
   const colors = typeColors[node.type] || typeColors.evidence;
+
+  // Group evidence by source type
+  const groupedEvidence = useMemo(() => {
+    if (!node.evidence) return {};
+    const groups = {};
+    node.evidence.forEach((item) => {
+      const src = item.source || 'other';
+      if (!groups[src]) groups[src] = [];
+      groups[src].push(item);
+    });
+    return groups;
+  }, [node.evidence]);
+
+  const categories = [
+    { key: 'telemetry', label: 'Telemetry Observations', icon: '📊' },
+    { key: 'error_log', label: 'Error Log Entries', icon: '⚠️' },
+    { key: 'maintenance', label: 'Maintenance Records', icon: '🔧' },
+    { key: 'manual', label: 'Technical Manuals', icon: '📖' },
+    { key: 'sop', label: 'Standard Operating Procedures (SOP)', icon: '📋' },
+    { key: 'historical_case', label: 'Historical Precedents & Cases', icon: '💥' },
+    { key: 'failure_history', label: 'Failure History Logs', icon: '💥' }
+  ];
+
+  const totalEvidenceCount = node.evidence?.length || 0;
 
   return (
     <div className={`evidence-drawer ${node ? 'open' : ''}`}>
@@ -73,50 +103,103 @@ export default function EvidenceDrawer({ node, onClose }) {
         </div>
       </div>
 
-      {/* Evidence Items */}
-      {node.evidence && node.evidence.length > 0 && (
-        <div>
-          <h3 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">
-            Supporting Evidence
+      {/* Grouped Evidence Display */}
+      {totalEvidenceCount > 0 ? (
+        <div className="space-y-6">
+          <h3 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">
+            Supporting Evidence Trace
           </h3>
-          <div className="space-y-3">
-            {node.evidence.map((item, index) => (
-              <div
-                key={index}
-                className="glass-card p-4 hover:transform-none"
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-base">{sourceIcons[item.source] || '📋'}</span>
-                  <span className="text-xs font-medium text-indigo-400">
-                    {sourceLabels[item.source] || item.source}
-                  </span>
-                </div>
-                <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-                  {item.description}
-                </p>
-                {item.timestamp && (
-                  <p className="text-xs text-[var(--text-muted)] mt-2">
-                    🕐 {new Date(item.timestamp).toLocaleString()}
-                  </p>
-                )}
-                {item.data && (
-                  <div className="mt-2 p-2 rounded-lg bg-[var(--bg-primary)] font-mono text-xs text-[var(--text-muted)]">
-                    {Object.entries(item.data).map(([k, v]) => (
-                      <div key={k}>
-                        <span className="text-indigo-400">{k}</span>: {String(v)}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+          
+          {categories.map((cat) => {
+            const items = groupedEvidence[cat.key];
+            if (!items || items.length === 0) return null;
 
-      {(!node.evidence || node.evidence.length === 0) && (
-        <div className="text-sm text-[var(--text-muted)] italic">
-          No direct evidence items for this node.
+            return (
+              <div key={cat.key} className="space-y-2.5">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--text-secondary)] px-1">
+                  <span>{cat.icon}</span>
+                  <span>{cat.label}</span>
+                  <span className="text-[var(--text-muted)]">({items.length})</span>
+                </div>
+
+                <div className="space-y-3">
+                  {items.map((item, index) => {
+                    const hasDocInfo = item.document_title || item.section;
+                    const metaInfo = item.metadata || {};
+                    
+                    return (
+                      <div key={index} className="glass-card p-4 hover:transform-none space-y-2">
+                        {/* Title & Section for Manuals/SOPs/Cases */}
+                        {hasDocInfo && (
+                          <div className="border-b border-[var(--border-subtle)] pb-2 mb-2">
+                            <div className="text-xs font-semibold text-indigo-400 leading-tight">
+                              {item.document_title || 'Unknown Source'}
+                            </div>
+                            {item.section && (
+                              <div className="text-[10px] text-[var(--text-muted)] font-medium mt-0.5">
+                                📌 {item.section}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Content Excerpt / Description */}
+                        <p className="text-sm text-[var(--text-secondary)] leading-relaxed whitespace-pre-line">
+                          {item.excerpt || item.description}
+                        </p>
+
+                        {/* Timestamp */}
+                        {item.timestamp && (
+                          <div className="text-[10px] text-[var(--text-muted)] flex items-center gap-1 mt-1">
+                            <span>🕐</span>
+                            <span>{new Date(item.timestamp).toLocaleString()}</span>
+                          </div>
+                        )}
+
+                        {/* Raw Data (Telemetry/Metrics) */}
+                        {item.data && Object.keys(item.data).length > 0 && (
+                          <div className="mt-2 p-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)] font-mono text-[11px] text-[var(--text-muted)] grid grid-cols-2 gap-2">
+                            {Object.entries(item.data).map(([k, v]) => (
+                              <div key={k} className="flex justify-between border-b border-[var(--border-subtle)] pb-1 last:border-b-0">
+                                <span className="text-indigo-400 font-semibold">{k}</span>
+                                <span>{String(v)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Metadata Badges (Component, Failure Mode, Sensor) */}
+                        {Object.keys(metaInfo).length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-2 pt-1">
+                            {metaInfo.component && metaInfo.component !== 'None' && (
+                              <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">
+                                ⚙️ {metaInfo.component}
+                              </span>
+                            )}
+                            {metaInfo.failure_mode && metaInfo.failure_mode !== 'None' && (
+                              <span className="text-[10px] px-2 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 font-medium">
+                                ⚠️ {metaInfo.failure_mode}
+                              </span>
+                            )}
+                            {metaInfo.sensor && metaInfo.sensor !== 'None' && (
+                              <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">
+                                🔌 {metaInfo.sensor}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="text-sm text-[var(--text-muted)] italic text-center py-8 border border-dashed border-[var(--border-subtle)] rounded-xl bg-[var(--bg-primary)] flex flex-col items-center justify-center gap-2">
+          <span>⚠️</span>
+          <span>Insufficient supporting evidence available.</span>
         </div>
       )}
     </div>
