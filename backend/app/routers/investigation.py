@@ -26,8 +26,8 @@ from app.services.reasoner import generate_reasoning_graph
 router = APIRouter(tags=["investigation"])
 
 # Total wall-clock budget for one investigation (retrieve + reason × up to 2 attempts).
-# Fireworks SDK timeout is 30s per attempt; 2 attempts = 60s, +15s headroom = 75s.
-INVESTIGATION_TIMEOUT_SECONDS = 75
+# Fireworks SDK timeout is 60s per attempt; 2 attempts = 120s, +15s headroom = 135s.
+INVESTIGATION_TIMEOUT_SECONDS = 135
 
 
 def _ts():

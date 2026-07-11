@@ -52,9 +52,17 @@ const nodeTypes = { reasoning: ReasoningNodeComponent };
 const typeIcons = {
   root_cause: '🔴',
   symptom: '🟡',
+  observed_symptom: '🟡',
   contributing_factor: '🟣',
   evidence: '🔵',
   recommendation: '🟢',
+  telemetry: '📡',
+  failure_mode: '⚙️',
+  operational_risk: '⚠️',
+  business_impact: '💼',
+  immediate_action: '🚨',
+  preventive_action: '🛡️',
+  predictive_state: '🔮',
 };
 
 // ─── Layout Helper (simple top-down) ────────────────────────────
@@ -135,6 +143,7 @@ const edgeColors = {
   contributes_to: '#8b5cf6',
   evidence_of: '#3b82f6',
   requires: '#10b981',
+  branches_to: '#ec4899',
 };
 
 // ─── Animation Constants ────────────────────────────────────────

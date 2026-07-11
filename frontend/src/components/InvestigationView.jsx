@@ -67,6 +67,17 @@ function DataRow({ label, value, valueColor }) {
   );
 }
 
+const getSeverityColor = (val) => {
+  if (!val) return 'var(--text-secondary)';
+  const v = val.toLowerCase();
+  if (v.includes('critical') || v.includes('very high')) return 'var(--danger)';
+  if (v.includes('high')) return '#f97316'; // Orange
+  if (v.includes('mod') || v.includes('medium')) return '#f59e0b'; // Yellow/Amber
+  if (v.includes('low')) return 'var(--success)';
+  return 'var(--text-secondary)';
+};
+
+
 export default function InvestigationView() {
   const { machineId } = useParams();
   const id = parseInt(machineId, 10);
@@ -315,63 +326,556 @@ export default function InvestigationView() {
       {/* ─── Investigation Result ─────────────────────── */}
       {result && (
         <div style={{ marginBottom: 28 }} className="fade-in-up">
-          {/* Summary + Root Cause */}
-          <div className="card" style={{ padding: 24, marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 16 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          {/* Contradictory Evidence Alert Box */}
+          {result.contradictory_evidence && result.contradictory_evidence.length > 0 && (
+            <div className="card" style={{
+              padding: '16px 20px',
+              marginBottom: 16,
+              borderLeft: '4px solid var(--warning)',
+              background: 'rgba(245, 158, 11, 0.04)',
+            }}>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--warning)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                ⚠️ Conflicting Signals Detected (Physical Verification Recommended)
+              </span>
+              <ul style={{ paddingLeft: 16, margin: 0, fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                {result.contradictory_evidence.map((ce, idx) => (
+                  <li key={idx} style={{ padding: '2px 0', lineHeight: 1.4 }}>{ce}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Summary + Root Cause + Urgency + Info Briefing */}
+          <div className="card" style={{ padding: 24, marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 24 }}>
+              {/* Left Column: Causal Analysis */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                   <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Investigation Summary
+                    Incident Briefing
                   </span>
-                  <span className="badge badge-accent">
-                    {Math.round(result.confidence * 100)}% confidence
+                  {result.executive_summary?.urgency && (
+                    <span className={`badge ${
+                      result.executive_summary.urgency.toLowerCase() === 'critical' ? 'badge-critical' :
+                      result.executive_summary.urgency.toLowerCase() === 'high' ? 'badge-warning' : 'badge-neutral'
+                    }`}>
+                      {result.executive_summary.urgency} Urgency
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div>
+                    <div className="t-caption" style={{ color: 'var(--text-muted)', marginBottom: 2 }}>What Happened</div>
+                    <p className="t-body" style={{ lineHeight: 1.6 }}>{result.executive_summary?.what_happened || result.summary}</p>
+                  </div>
+                  <div>
+                    <div className="t-caption" style={{ color: 'var(--text-muted)', marginBottom: 2 }}>Why It Happened</div>
+                    <p className="t-body" style={{ lineHeight: 1.6 }}>{result.executive_summary?.why_it_happened}</p>
+                  </div>
+                  <div>
+                    <div className="t-caption" style={{ color: 'var(--text-muted)', marginBottom: 2 }}>Current Condition</div>
+                    <p className="t-body" style={{ lineHeight: 1.6 }}>{result.executive_summary?.current_condition}</p>
+                  </div>
+                </div>
+
+                {/* Root Cause highlight banner */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '10px 14px',
+                  background: 'var(--danger-subtle)',
+                  border: '1px solid var(--danger-border)',
+                  borderRadius: 'var(--radius-md)',
+                  marginTop: 16,
+                }}>
+                  <div style={{
+                    width: 6, height: 6, borderRadius: '50%',
+                    background: 'var(--danger)',
+                    boxShadow: '0 0 6px var(--danger)',
+                    flexShrink: 0,
+                  }} />
+                  <span className="t-caption" style={{ color: 'var(--text-muted)' }}>Root cause</span>
+                  <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--danger)' }}>
+                    {result.root_cause}
                   </span>
                 </div>
-                <p className="t-body" style={{ lineHeight: 1.7 }}>{result.summary}</p>
               </div>
-            </div>
 
-            {/* Root Cause highlight */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '10px 16px',
-              background: 'var(--danger-subtle)',
-              border: '1px solid var(--danger-border)',
-              borderRadius: 'var(--radius-md)',
-            }}>
-              <div style={{
-                width: 6, height: 6, borderRadius: '50%',
-                background: 'var(--danger)',
-                boxShadow: '0 0 6px var(--danger)',
-                flexShrink: 0,
-              }} />
-              <span className="t-caption" style={{ color: 'var(--text-muted)' }}>Root cause</span>
-              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--danger)' }}>
-                {result.root_cause}
-              </span>
+              {/* Right Column: Confidence Breakdown & Business Metrics */}
+              <div style={{ borderLeft: '1px solid var(--border-subtle)', paddingLeft: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Confidence Score
+                    </span>
+                    <span className="t-card-title" style={{ color: 'var(--accent)' }}>
+                      {Math.round(result.confidence * 100)}%
+                    </span>
+                  </div>
+                  <div style={{ height: 6, background: 'var(--border-subtle)', borderRadius: 3, overflow: 'hidden', marginBottom: 12 }}>
+                    <div style={{ width: `${result.confidence * 100}%`, height: '100%', background: 'linear-gradient(90deg, var(--accent), var(--violet))' }} />
+                  </div>
+                  
+                  {/* Detailed breakdown factors */}
+                  {result.confidence_breakdown && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-muted)' }}>
+                        <span>Telemetry: {Math.round(result.confidence_breakdown.telemetry * 100)}%</span>
+                        <span>Manuals: {Math.round(result.confidence_breakdown.manual_evidence * 100)}%</span>
+                        <span>History: {Math.round(result.confidence_breakdown.maintenance_history * 100)}%</span>
+                      </div>
+                      <p className="t-caption" style={{ fontStyle: 'italic', marginTop: 4, lineHeight: 1.4 }}>
+                        "{result.confidence_breakdown.explanation}"
+                      </p>
+                      {result.confidence_breakdown.supporting_factors?.length > 0 && (
+                        <div style={{ marginTop: 4 }}>
+                          <span style={{ fontSize: '9px', fontWeight: 600, color: 'var(--success)', textTransform: 'uppercase' }}>High confidence because:</span>
+                          <ul style={{ paddingLeft: 12, margin: '2px 0 0 0', fontSize: '10px', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {result.confidence_breakdown.supporting_factors.map((f, idx) => <li key={idx}>✓ {f}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                      {result.confidence_breakdown.reducing_factors?.length > 0 && (
+                        <div style={{ marginTop: 4 }}>
+                          <span style={{ fontSize: '9px', fontWeight: 600, color: 'var(--warning)', textTransform: 'uppercase' }}>Confidence reduced because:</span>
+                          <ul style={{ paddingLeft: 12, margin: '2px 0 0 0', fontSize: '10px', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {result.confidence_breakdown.reducing_factors.map((f, idx) => <li key={idx}>⚠ {f}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                      {result.confidence_breakdown.missing_evidence < 0 && (
+                        <div style={{ fontSize: '10px', color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                          ⚠️ Penalty of {Math.round(result.confidence_breakdown.missing_evidence * -100)}% applied for missing evidence
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Business Impact Card Grid */}
+                {result.business_impact && (
+                  <div>
+                    <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: 10 }}>
+                      Operational & Business Impact
+                    </span>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      <div className="card" style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', background: 'var(--bg-base)' }}>
+                        <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Downtime</span>
+                        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: getSeverityColor(result.business_impact.downtime) }}>
+                          {result.business_impact.downtime}
+                        </span>
+                      </div>
+                      <div className="card" style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', background: 'var(--bg-base)' }}>
+                        <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Disruption</span>
+                        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: getSeverityColor(result.business_impact.production_disruption) }}>
+                          {result.business_impact.production_disruption}
+                        </span>
+                      </div>
+                      <div className="card" style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', background: 'var(--bg-base)' }}>
+                        <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Est. Cost</span>
+                        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: getSeverityColor(result.business_impact.potential_cost_range) }}>
+                          {result.business_impact.potential_cost_range}
+                        </span>
+                      </div>
+                      <div className="card" style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', background: 'var(--bg-base)' }}>
+                        <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Adjacent Risk</span>
+                        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: getSeverityColor(result.business_impact.risk_to_adjacent_equipment) }}>
+                          {result.business_impact.risk_to_adjacent_equipment}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Reasoning Graph */}
-          <ReasoningGraph investigation={result} onNodeClick={setSelectedNode} />
+          {/* Reasoning Graph Section */}
+          <div style={{ marginBottom: 16 }}>
+            <ReasoningGraph investigation={result} onNodeClick={setSelectedNode} />
+          </div>
 
-          {/* Recommendation */}
+          {/* Causal Evidence Correlation Callout */}
+          {result.evidence_correlation && (
+            <div className="card" style={{
+              padding: '16px 20px',
+              marginBottom: 16,
+              borderLeft: '4px solid var(--accent)',
+              background: 'linear-gradient(90deg, rgba(99,102,241,0.03), transparent)'
+            }}>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
+                Causal Evidence Correlation
+              </span>
+              <p className="t-body" style={{ lineHeight: 1.6, fontStyle: 'italic' }}>
+                "{result.evidence_correlation}"
+              </p>
+            </div>
+          )}
+
+          {/* Alternative Hypotheses Card Section */}
+          {result.alternative_hypotheses && result.alternative_hypotheses.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 10 }}>
+                <span className="t-card-title" style={{ fontSize: 'var(--text-sm)' }}>
+                  Competing Hypotheses Evaluation
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${result.alternative_hypotheses.length}, 1fr)`, gap: 12 }}>
+                {result.alternative_hypotheses.map((hyp, i) => (
+                  <div key={i} className="card" style={{ padding: 16, background: hyp.status === 'rejected' ? 'rgba(239, 68, 68, 0.01)' : 'var(--bg-card)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <span className="font-semibold text-xs" style={{ color: 'var(--text-primary)' }}>{hyp.name}</span>
+                      <span className={`badge ${
+                        hyp.status === 'rejected' ? 'badge-critical' :
+                        hyp.status === 'evaluated' ? 'badge-accent' : 'badge-neutral'
+                      }`}>
+                        {hyp.status.toUpperCase()} ({Math.round(hyp.confidence * 100)}%)
+                      </span>
+                    </div>
+                    <p className="t-caption" style={{ lineHeight: 1.4, marginBottom: 12 }}>{hyp.rationale}</p>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {hyp.supporting_evidence?.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: '9px', fontWeight: 600, color: 'var(--success)', textTransform: 'uppercase', marginBottom: 2 }}>Supporting</div>
+                          <ul style={{ paddingLeft: 12, margin: 0, fontSize: '10px', color: 'var(--text-secondary)' }}>
+                            {hyp.supporting_evidence.map((se, j) => <li key={j} style={{ padding: '2px 0' }}>✓ {se}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                      {hyp.contradicting_evidence?.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: '9px', fontWeight: 600, color: 'var(--danger)', textTransform: 'uppercase', marginBottom: 2 }}>Contradicting</div>
+                          <ul style={{ paddingLeft: 12, margin: 0, fontSize: '10px', color: 'var(--text-secondary)' }}>
+                            {hyp.contradicting_evidence.map((ce, j) => <li key={j} style={{ padding: '2px 0' }}>✗ {ce}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                      {hyp.missing_evidence?.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: '9px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 2 }}>Missing/Unverified</div>
+                          <ul style={{ paddingLeft: 12, margin: 0, fontSize: '10px', color: 'var(--text-secondary)' }}>
+                            {hyp.missing_evidence.map((me, j) => <li key={j} style={{ padding: '2px 0' }}>? {me}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Operational Risk & Failure Progression sequence */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: 16, marginBottom: 16 }}>
+            {/* Risk Assessment */}
+            {result.risk_assessment && (
+              <div className="card" style={{ padding: 20 }}>
+                <SectionHeader icon="⚠️" title="Operational Risk Assessment" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <span className="t-caption">Severity:</span>
+                  <span className={`badge ${
+                    result.risk_assessment.severity.toLowerCase() === 'critical' ? 'badge-critical' :
+                    result.risk_assessment.severity.toLowerCase() === 'high' ? 'badge-warning' : 'badge-neutral'
+                  }`}>
+                    {result.risk_assessment.severity}
+                  </span>
+                </div>
+                <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>Consequences of continued unchecked operation:</div>
+                <ul style={{ paddingLeft: 16, margin: 0, fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {result.risk_assessment.consequences?.map((cons, idx) => (
+                    <li key={idx} style={{ lineHeight: 1.4 }}>{cons}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Timeline progression flow */}
+            <div className="card" style={{ padding: 20 }}>
+              <SectionHeader icon="🔮" title="Chronological Event Timeline" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'relative', paddingLeft: 16 }}>
+                {/* Vertical line connection */}
+                <div style={{
+                  position: 'absolute',
+                  top: 8, bottom: 8, left: 21,
+                  width: 2,
+                  background: 'linear-gradient(180deg, var(--accent), var(--danger))'
+                }} />
+
+                {result.timeline && result.timeline.length > 0 ? (
+                  result.timeline.map((step, idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: 12, position: 'relative', zIndex: 1, alignItems: 'flex-start' }}>
+                      <div style={{
+                        width: 12, height: 12,
+                        borderRadius: '50%',
+                        background: idx === 0 ? 'var(--accent)' : idx === result.timeline.length - 1 ? 'var(--danger)' : 'var(--border-default)',
+                        border: '2px solid var(--bg-card)',
+                        flexShrink: 0,
+                        marginTop: 4,
+                      }} />
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)' }}>
+                          {step.timestamp}
+                        </span>
+                        <span className="t-caption" style={{
+                          color: idx === result.timeline.length - 1 ? 'var(--danger)' : 'var(--text-primary)',
+                          fontWeight: idx === result.timeline.length - 1 ? 600 : 400,
+                          lineHeight: 1.4
+                        }}>
+                          {step.event}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  result.failure_progression?.map((prog, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative', zIndex: 1 }}>
+                      <div style={{
+                        width: 12, height: 12,
+                        borderRadius: '50%',
+                        background: idx === 0 ? 'var(--accent)' : idx === result.failure_progression.length - 1 ? 'var(--danger)' : 'var(--border-default)',
+                        border: '2px solid var(--bg-card)',
+                        flexShrink: 0,
+                      }} />
+                      <span className="t-caption" style={{
+                        color: idx === 0 ? 'var(--text-primary)' : idx === result.failure_progression.length - 1 ? 'var(--danger)' : 'var(--text-secondary)',
+                        fontWeight: idx === 0 || idx === result.failure_progression.length - 1 ? 600 : 400
+                      }}>
+                        {prog}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Engineering Diagnostic Audit (Self-Challenge) */}
+          {result.self_challenge && (
+            <div className="card" style={{ padding: 20, marginBottom: 16 }}>
+              <SectionHeader icon="🧐" title="Engineering Self-Challenge Audit" />
+              <p className="t-caption" style={{ marginBottom: 12, color: 'var(--text-muted)' }}>
+                Independent verification audit challenging the primary diagnosis against competing signals.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+                <div>
+                  <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--success)', textTransform: 'uppercase', marginBottom: 6 }}>Supporting Evidence</div>
+                  <ul style={{ paddingLeft: 12, margin: 0, fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {result.self_challenge.supporting_evidence?.map((item, idx) => (
+                      <li key={idx} style={{ lineHeight: 1.4 }}>✓ {item}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--danger)', textTransform: 'uppercase', marginBottom: 6 }}>Contradicting / Conflicting</div>
+                  <ul style={{ paddingLeft: 12, margin: 0, fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {result.self_challenge.contradicting_evidence?.length > 0 ? (
+                      result.self_challenge.contradicting_evidence.map((item, idx) => (
+                        <li key={idx} style={{ lineHeight: 1.4 }}>✗ {item}</li>
+                      ))
+                    ) : (
+                      <li style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>No conflicting signals found in logs</li>
+                    )}
+                  </ul>
+                </div>
+                <div>
+                  <div style={{ fontSize: '10px', fontWeight: 600, color: '#f59e0b', textTransform: 'uppercase', marginBottom: 6 }}>Additional Evidence Needed</div>
+                  <ul style={{ paddingLeft: 12, margin: 0, fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {result.self_challenge.additional_evidence_needed?.map((item, idx) => (
+                      <li key={idx} style={{ lineHeight: 1.4 }}>? {item}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Phased Recommendations Action Cards */}
+          {result.phased_recommendations && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 10 }}>
+                <span className="t-card-title" style={{ fontSize: 'var(--text-sm)' }}>
+                  Phased Action Plan
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                {/* Immediate actions */}
+                <div className="card" style={{ padding: 18, borderTop: '4px solid var(--danger)' }}>
+                  <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--danger)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>🚨 Immediate Actions</span>
+                    <span className="badge badge-critical" style={{ fontSize: '9px', height: 16 }}>&lt; 1 Hour</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {result.phased_recommendations.immediate && result.phased_recommendations.immediate.length > 0 ? (
+                      result.phased_recommendations.immediate.map((rec, j) => (
+                        <div key={j} style={{ borderBottom: j < result.phased_recommendations.immediate.length - 1 ? '1px solid var(--border-subtle)' : 'none', paddingBottom: 6 }}>
+                          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)' }}>• {rec.action}</div>
+                          <div style={{ fontSize: '10px', color: 'var(--text-muted)', paddingLeft: 8, marginTop: 2, lineHeight: 1.3 }}>
+                            Rationale: {rec.reason}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      result.phased_recommendations.immediate_1h?.map((rec, j) => (
+                        <div key={j} style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>• {rec}</div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Short term actions */}
+                <div className="card" style={{ padding: 18, borderTop: '4px solid #f97316' }}>
+                  <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: '#f97316', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>⏳ Short Term Actions</span>
+                    <span className="badge badge-warning" style={{ fontSize: '9px', height: 16 }}>&lt; 24 Hours</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {result.phased_recommendations.short_term && result.phased_recommendations.short_term.length > 0 ? (
+                      result.phased_recommendations.short_term.map((rec, j) => (
+                        <div key={j} style={{ borderBottom: j < result.phased_recommendations.short_term.length - 1 ? '1px solid var(--border-subtle)' : 'none', paddingBottom: 6 }}>
+                          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)' }}>• {rec.action}</div>
+                          <div style={{ fontSize: '10px', color: 'var(--text-muted)', paddingLeft: 8, marginTop: 2, lineHeight: 1.3 }}>
+                            Rationale: {rec.reason}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      result.phased_recommendations.short_term_24h?.map((rec, j) => (
+                        <div key={j} style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>• {rec}</div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Preventive actions */}
+                <div className="card" style={{ padding: 18, borderTop: '4px solid var(--success)' }}>
+                  <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--success)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>🛡️ Long Term Preventive</span>
+                    <span className="badge badge-healthy" style={{ fontSize: '9px', height: 16 }}>Proactive</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {result.phased_recommendations.preventive && result.phased_recommendations.preventive.length > 0 ? (
+                      result.phased_recommendations.preventive.map((rec, j) => (
+                        <div key={j} style={{ borderBottom: j < result.phased_recommendations.preventive.length - 1 ? '1px solid var(--border-subtle)' : 'none', paddingBottom: 6 }}>
+                          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)' }}>• {rec.action}</div>
+                          <div style={{ fontSize: '10px', color: 'var(--text-muted)', paddingLeft: 8, marginTop: 2, lineHeight: 1.3 }}>
+                            Rationale: {rec.reason}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      result.phased_recommendations.long_term_preventive?.map((rec, j) => (
+                        <div key={j} style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>• {rec}</div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Preventability Assessment */}
+          {result.preventability && (
+            <div className="card" style={{ padding: 20, marginBottom: 16 }}>
+              <SectionHeader icon="🛡️" title="Preventability Assessment" />
+              <div style={{ display: 'grid', gridTemplateColumns: '0.8fr 1.2fr 1.2fr', gap: 20 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 6 }}>Incident Preventable?</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                      width: 24, height: 24, borderRadius: '50%',
+                      background: result.preventability.preventable ? 'var(--success-subtle)' : 'var(--danger-subtle)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 12, fontWeight: 700,
+                      color: result.preventability.preventable ? 'var(--success)' : 'var(--danger)'
+                    }}>
+                      {result.preventability.preventable ? '✓' : '✗'}
+                    </div>
+                    <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: result.preventability.preventable ? 'var(--success)' : 'var(--danger)' }}>
+                      {result.preventability.preventable ? 'Preventable' : 'Unpreventable'}
+                    </span>
+                  </div>
+                </div>
+
+                {result.preventability.warnings?.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>Early Warning Signs</div>
+                    <ul style={{ paddingLeft: 12, margin: 0, fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {result.preventability.warnings.map((warn, k) => <li key={k} style={{ lineHeight: 1.4 }}>{warn}</li>)}
+                    </ul>
+                  </div>
+                )}
+
+                {result.preventability.thresholds?.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>Telemetry Alarm Thresholds</div>
+                    <ul style={{ paddingLeft: 12, margin: 0, fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {result.preventability.thresholds.map((thresh, k) => <li key={k} style={{ lineHeight: 1.4 }}>{thresh}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Key Insight Highlight Banner */}
+          {result.key_insight && (
+            <div className="card" style={{
+              padding: 20,
+              marginBottom: 16,
+              background: 'linear-gradient(135deg, var(--bg-card), rgba(99,102,241,0.04))',
+              border: '1px solid var(--border-default)',
+              boxShadow: '0 0 20px rgba(99,102,241,0.03)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              {/* Radial glow background */}
+              <div style={{
+                position: 'absolute',
+                top: '-50%', right: '-30%',
+                width: 250, height: 250,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)',
+                pointerEvents: 'none'
+              }} />
+
+              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', position: 'relative', zIndex: 1 }}>
+                <div style={{ fontSize: 20 }}>💡</div>
+                <div>
+                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: 4 }}>
+                    Reliability Key Conclusion
+                  </span>
+                  <p style={{
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 500,
+                    lineHeight: 1.6,
+                    color: 'var(--text-primary)',
+                    margin: 0
+                  }}>
+                    {result.key_insight}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Recommended Action (Full Description) */}
           <div className="card" style={{
             padding: 24,
-            marginTop: 12,
+            marginBottom: 16,
             borderColor: 'var(--success-border)',
-            background: 'linear-gradient(135deg, var(--bg-card), rgba(16,185,129,0.03))',
+            background: 'linear-gradient(135deg, var(--bg-card), rgba(16,185,129,0.02))',
           }}>
-            <SectionHeader icon="✓" title="Recommended Action" />
+            <SectionHeader icon="✓" title="General Summary & Recommendation" />
             <p className="t-body" style={{ lineHeight: 1.7, whiteSpace: 'pre-line' }}>
               {result.recommendation}
             </p>
           </div>
 
           {/* Sources */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span className="t-caption">Sources consulted:</span>
             {result.sources_consulted?.map((source) => (
               <span key={source} className="badge badge-neutral">{source}</span>

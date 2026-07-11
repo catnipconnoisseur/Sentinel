@@ -46,3 +46,5 @@ backend/data/chromadb/
 # OS-specific
 .DS_Store
 Thumbs.db
+*.log
+

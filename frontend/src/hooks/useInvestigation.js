@@ -56,7 +56,7 @@ export function useInvestigation(machineId) {
     abortControllerRef.current = controller;
 
     try {
-      const data = await api.investigate(machineId, cleanQuestion, { signal: controller.signal });
+      const data = await api.investigate(machineId, cleanQuestion, { signal: controller.signal, timeout: 140000 });
       
       // Only update state if this was the latest active controller/request
       if (abortControllerRef.current === controller) {

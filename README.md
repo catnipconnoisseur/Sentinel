@@ -112,9 +112,52 @@ We recommend [Railway](https://railway.app/) for a hassle-free public URL:
 4. Add a custom domain to the `frontend` service in Railway settings.
 5. Deployment is complete! The first startup will take ~15 seconds extra as the AI indexes the factory manuals into ChromaDB.
 
-## Hackathon Milestones Completed ✅
-We meticulously planned and executed this project over a strict 4-day timeline.
-* Day 1: Foundation (FastAPI + React Flow + SQLite schemas)
-* Day 2: Intelligence (ChromaDB semantic search + Llama 3 structured output)
-* Day 3: The Magic (Topological graph animations + Evidence drawer)
-* Day 4: Polish & Deploy (Dockerization + UI refinements + AMD Cloud deployment prep)
+## 📸 Screenshots & Demo Walkthrough
+
+### 1. Dashboard Overview
+Interactive grid list displaying live status metrics and historical failure profiles of all factory machinery.
+![Dashboard](docs/images/dashboard.png)
+
+### 2. Live Machinery Analysis & Selection
+Inspects historical work orders, active sensor alarms, and guides user query entry.
+![Machine Selection](docs/images/machine-selection.png)
+
+### 3. Evidentiary Retrieval & RAG Indexing
+Sentinel constructs contextual bundles from raw database parameters and queries local technical manual sections.
+![Investigation Loading](docs/images/investigation-loading.png)
+
+### 4. Causal Reasoning Incident Report
+Sentinel generates dynamic engineering-grade incident reports, confidence weight explanations, and chronologically sequenced failure timelines.
+![Investigation Summary](docs/images/investigation-summary.png)
+
+### 5. Interactive Reasoning Graph (React Flow)
+Visualizes causal relationships between root causes, symptoms, and phased action plans.
+![Reasoning Graph](docs/images/reasoning-graph.png)
+
+### 6. Evidence Attribution & Technical Citations
+Exposes exact technical manual excerpts, troubleshooting steps, and maintenance logs supporting every node in the graph.
+![Evidence Panel](docs/images/evidence-panel.png)
+
+### 7. Action Priorities & Engineering Justifications
+Classifies recommendations by urgency, providing safety and performance justifications.
+![Engineering Report](docs/images/engineering-report.png)
+
+---
+
+## 🚀 Live Demo
+Access the live, publicly deployed instance of Sentinel at:
+[Public Frontend URL](https://sentinel-production-9b3f.up.railway.app)
+
+---
+
+## 📁 Repository Structure
+- `/backend`: FastAPI API server, SQLAlchemy model services, database bootstrappers, and embedding indexes.
+- `/frontend`: Vite React dashboard, XYFlow node graphs, and responsive telemetry visualizers.
+- `/docs/images`: Automated high-resolution pre-submission screens.
+- `/submission`: Slide deck materials, script drafts, and pre-screening checklists.
+
+---
+
+## 📄 License
+This project is licensed under the [MIT License](LICENSE).
+

@@ -439,21 +439,37 @@ a { text-decoration: none; color: inherit; }
   border-color: var(--danger-border);
   background: var(--danger-subtle);
 }
-.reasoning-node.symptom {
+.reasoning-node.symptom, .reasoning-node.observed_symptom {
   border-color: var(--warning-border);
   background: var(--warning-subtle);
 }
-.reasoning-node.contributing_factor {
+.reasoning-node.contributing_factor, .reasoning-node.failure_mode {
   border-color: var(--violet-border);
   background: var(--violet-subtle);
 }
-.reasoning-node.evidence {
+.reasoning-node.evidence, .reasoning-node.telemetry {
   border-color: var(--info-border);
   background: var(--info-subtle);
 }
-.reasoning-node.recommendation {
+.reasoning-node.recommendation, .reasoning-node.preventive_action {
   border-color: var(--success-border);
   background: var(--success-subtle);
+}
+.reasoning-node.operational_risk {
+  border-color: #f97316;
+  background: rgba(249, 115, 22, 0.08);
+}
+.reasoning-node.immediate_action {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+}
+.reasoning-node.predictive_state {
+  border-color: #06b6d4;
+  background: rgba(6, 182, 212, 0.08);
+}
+.reasoning-node.business_impact {
+  border-color: var(--border-subtle);
+  background: var(--bg-surface);
 }
 
 /* ═══════════════════════════════════════════════════════════════
