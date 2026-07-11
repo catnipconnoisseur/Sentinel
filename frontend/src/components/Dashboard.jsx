@@ -35,24 +35,45 @@ function SkeletonCard() {
 export default function Dashboard() {
   const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  useEffect(() => {
+  const loadMachines = () => {
+    setLoading(true);
+    setFetchError(null);
     api.getMachines()
-      .then(setMachines)
-      .catch(console.error)
+      .then((data) => {
+        // Guard: backend must return an array
+        if (!Array.isArray(data)) {
+          console.error('[Dashboard] /api/machines returned non-array:', data);
+          setFetchError('Unexpected response from server. Expected a list of machines.');
+          return;
+        }
+        setMachines(data);
+      })
+      .catch((err) => {
+        console.error('[Dashboard] getMachines failed:', err);
+        setFetchError(err.message || 'Failed to load machines. Check backend connectivity.');
+      })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadMachines();
   }, []);
 
   const filtered = useMemo(() => {
-    return machines.filter((m) => {
+    console.log('[Dashboard] useMemo filtering machines count:', machines.length, 'search:', JSON.stringify(search), 'statusFilter:', statusFilter);
+    const res = machines.filter((m) => {
       const matchesSearch =
         String(m.machine_id).includes(search) ||
         m.model.toLowerCase().includes(search.toLowerCase());
       const matchesStatus = statusFilter === 'all' || m.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
+    console.log('[Dashboard] useMemo filtered count:', res.length);
+    return res;
   }, [machines, search, statusFilter]);
 
   const statusCounts = useMemo(() => {
@@ -74,6 +95,34 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* ─── Fetch Error Banner ────────────────────────── */}
+      {fetchError && (
+        <div style={{
+          background: 'var(--danger-subtle)',
+          border: '1px solid var(--danger-border)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '16px 20px',
+          marginBottom: 24,
+          color: 'var(--danger)',
+          fontSize: 'var(--text-sm)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 16,
+        }}>
+          <div>
+            <strong style={{ display: 'block', marginBottom: 4 }}>Connection Error</strong>
+            <span>{fetchError}</span>
+          </div>
+          <button
+            onClick={loadMachines}
+            className="btn btn-danger btn-sm"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* ─── Stat Bar ─────────────────────────────────── */}
       {!loading && (

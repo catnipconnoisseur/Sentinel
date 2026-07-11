@@ -1,0 +1,119 @@
+/Users/tiffanychristabelanggriawan/Documents/AMD Hackathon/backend/venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+Failed to send telemetry event ClientStartEvent: capture() takes 1 positional argument but 3 were given
+Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+Failed to send telemetry event CollectionQueryEvent: capture() takes 1 positional argument but 3 were given
+INFO:     Started server process [80023]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+[embeddings] ChromaDB warmed up — 62 chunks indexed
+INFO:     127.0.0.1:57370 - "GET /api/machines HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57375 - "GET /api/machines HTTP/1.1" 200 OK
+[CLIENT_INFO] [frontend][api] start GET /api/machines timeoutMs=45000
+INFO:     127.0.0.1:57386 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_INFO] [frontend][api] start GET /api/machines timeoutMs=45000
+INFO:     127.0.0.1:57388 - "POST /api/log HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57389 - "GET /api/machines HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57387 - "GET /api/machines HTTP/1.1" 200 OK
+[CLIENT_INFO] [frontend][api] response GET /api/machines status=200 durationMs=132
+INFO:     127.0.0.1:57390 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_INFO] [frontend][api] response GET /api/machines status=200 durationMs=164
+INFO:     127.0.0.1:57391 - "POST /api/log HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57392 - "GET /api/machines HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtering machines count: 100 search: "" statusFilter: all
+INFO:     127.0.0.1:57397 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtered count: 100
+INFO:     127.0.0.1:57398 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtering machines count: 100 search: "" statusFilter: all
+INFO:     127.0.0.1:57401 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtered count: 100
+INFO:     127.0.0.1:57402 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtering machines count: 0 search: "" statusFilter: all
+INFO:     127.0.0.1:57412 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtered count: 0
+INFO:     127.0.0.1:57413 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtering machines count: 0 search: "" statusFilter: all
+INFO:     127.0.0.1:57414 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtered count: 0
+INFO:     127.0.0.1:57415 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_INFO] [frontend][api] start GET /api/machines timeoutMs=45000
+INFO:     127.0.0.1:57416 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_INFO] [frontend][api] start GET /api/machines timeoutMs=45000
+INFO:     127.0.0.1:57420 - "POST /api/log HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57417 - "GET /api/machines HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57421 - "GET /api/machines HTTP/1.1" 200 OK
+[CLIENT_INFO] [frontend][api] response GET /api/machines status=200 durationMs=120
+INFO:     127.0.0.1:57427 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtering machines count: 100 search: "" statusFilter: all
+INFO:     127.0.0.1:57428 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtered count: 100
+INFO:     127.0.0.1:57429 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtering machines count: 100 search: "" statusFilter: all
+INFO:     127.0.0.1:57430 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtered count: 100
+INFO:     127.0.0.1:57431 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_INFO] [frontend][api] response GET /api/machines status=200 durationMs=147
+INFO:     127.0.0.1:57434 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtering machines count: 100 search: "" statusFilter: all
+INFO:     127.0.0.1:57438 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtered count: 100
+INFO:     127.0.0.1:57441 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtered count: 100
+INFO:     127.0.0.1:57442 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtering machines count: 100 search: "" statusFilter: all
+INFO:     127.0.0.1:57443 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtering machines count: 100 search: "" statusFilter: healthy
+INFO:     127.0.0.1:57455 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtered count: 91
+INFO:     127.0.0.1:57459 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtering machines count: 100 search: "" statusFilter: healthy
+INFO:     127.0.0.1:57460 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtered count: 91
+INFO:     127.0.0.1:57461 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtering machines count: 100 search: "" statusFilter: warning
+INFO:     127.0.0.1:57465 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtered count: 7
+INFO:     127.0.0.1:57468 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtering machines count: 100 search: "" statusFilter: warning
+INFO:     127.0.0.1:57469 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtered count: 7
+INFO:     127.0.0.1:57470 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtering machines count: 100 search: "" statusFilter: critical
+INFO:     127.0.0.1:57473 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtered count: 2
+INFO:     127.0.0.1:57477 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtering machines count: 100 search: "" statusFilter: critical
+INFO:     127.0.0.1:57478 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtered count: 2
+INFO:     127.0.0.1:57479 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtering machines count: 100 search: "" statusFilter: critical
+INFO:     127.0.0.1:57484 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtered count: 2
+INFO:     127.0.0.1:57485 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtering machines count: 100 search: "" statusFilter: critical
+INFO:     127.0.0.1:57488 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtered count: 2
+INFO:     127.0.0.1:57489 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtering machines count: 100 search: "" statusFilter: all
+INFO:     127.0.0.1:57495 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtered count: 100
+INFO:     127.0.0.1:57496 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtered count: 100
+INFO:     127.0.0.1:57497 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtering machines count: 100 search: "" statusFilter: all
+INFO:     127.0.0.1:57498 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtering machines count: 100 search: "" statusFilter: all
+INFO:     127.0.0.1:57502 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtered count: 100
+INFO:     127.0.0.1:57505 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtering machines count: 100 search: "" statusFilter: all
+INFO:     127.0.0.1:57506 - "POST /api/log HTTP/1.1" 200 OK
+[CLIENT_LOG] [Dashboard] useMemo filtered count: 100
+INFO:     127.0.0.1:57507 - "POST /api/log HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57511 - "GET /api/machines HTTP/1.1" 200 OK
+[CLIENT_INFO] [frontend][api] start GET /api/machines timeoutMs=45000
+INFO:     127.0.0.1:57516 - "POST /api/log HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57517 - "GET /api/machines HTTP/1.1" 200 OK
+[CLIENT_INFO] [frontend][api] response GET /api/machines status=200 durationMs=57
+INFO:     127.0.0.1:57520 - "POST /api/log HTTP/1.1" 200 OK
