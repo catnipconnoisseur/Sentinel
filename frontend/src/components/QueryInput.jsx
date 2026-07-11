@@ -1,12 +1,19 @@
 /**
- * QueryInput — "Ask Sentinel" input with submit button.
- * Prominent, centered, with keyboard shortcut hint.
+ * QueryInput — "Ask Sentinel" investigation input.
+ * Redesigned: larger, more prominent, cleaner prompt hints.
  */
 
 import { useState } from 'react';
 
+const SUGGESTED_QUERIES = [
+  'Why did this machine fail recently?',
+  'What is causing the vibration spike?',
+  'Is a failure imminent based on current telemetry?',
+];
+
 export default function QueryInput({ onSubmit, loading }) {
   const [question, setQuestion] = useState('');
+  const [focused, setFocused] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -15,37 +22,107 @@ export default function QueryInput({ onSubmit, loading }) {
     }
   };
 
+  const handleSuggestion = (q) => {
+    setQuestion(q);
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="w-full">
-      <div className="relative">
-        <div className="absolute left-4 top-1/2 -translate-y-1/2">
-          <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-          </svg>
+    <div>
+      <form onSubmit={handleSubmit}>
+        <div style={{
+          display: 'flex',
+          gap: 10,
+          background: 'var(--bg-card)',
+          border: `1px solid ${focused ? 'var(--border-focus)' : 'var(--border-default)'}`,
+          borderRadius: 'var(--radius-lg)',
+          padding: '4px 4px 4px 16px',
+          boxShadow: focused ? '0 0 0 3px rgba(99,102,241,0.12)' : 'none',
+          transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+        }}>
+          {/* Icon */}
+          <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <path d="M11 8v3M11 14h.01" strokeWidth="2.5" />
+            </svg>
+          </div>
+
+          {/* Input */}
+          <input
+            type="text"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            placeholder="Ask Sentinel — e.g. 'Why did this machine fail?'"
+            disabled={loading}
+            style={{
+              flex: 1,
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              color: 'var(--text-primary)',
+              fontFamily: 'var(--font-sans)',
+              fontSize: 'var(--text-sm)',
+              padding: '10px 0',
+            }}
+          />
+
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={loading || !question.trim()}
+            className="btn btn-primary"
+            style={{ flexShrink: 0 }}
+          >
+            {loading ? (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{
+                  width: 14,
+                  height: 14,
+                  border: '2px solid rgba(255,255,255,0.25)',
+                  borderTopColor: '#fff',
+                  borderRadius: '50%',
+                  animation: 'spin 0.7s linear infinite',
+                }} />
+                Analyzing
+              </span>
+            ) : 'Investigate'}
+          </button>
         </div>
-        <input
-          type="text"
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Ask Sentinel — e.g. 'Why did this machine fail yesterday?'"
-          disabled={loading}
-          className="w-full pl-12 pr-32 py-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm placeholder:text-[var(--text-muted)] focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all disabled:opacity-50"
-        />
-        <button
-          type="submit"
-          disabled={loading || !question.trim()}
-          className="absolute right-2 top-1/2 -translate-y-1/2 px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-medium cursor-pointer border-none transition-all hover:shadow-lg hover:shadow-indigo-500/25 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {loading ? (
-            <span className="flex items-center gap-2">
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Investigating...
-            </span>
-          ) : (
-            'Investigate'
-          )}
-        </button>
-      </div>
-    </form>
+      </form>
+
+      {/* Suggested queries */}
+      {!loading && !question && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+          {SUGGESTED_QUERIES.map((q) => (
+            <button
+              key={q}
+              onClick={() => handleSuggestion(q)}
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--text-muted)',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-full)',
+                padding: '4px 12px',
+                cursor: 'pointer',
+                transition: 'color 0.15s ease, border-color 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--text-secondary)';
+                e.currentTarget.style.borderColor = 'var(--border-default)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--text-muted)';
+                e.currentTarget.style.borderColor = 'var(--border-subtle)';
+              }}
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

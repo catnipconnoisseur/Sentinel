@@ -1,26 +1,55 @@
 /**
  * TelemetryChart — Recharts line chart for machine telemetry.
- * Shows voltage, rotation, pressure, and vibration over time.
+ * Redesigned: cleaner card layout, custom tooltip, metric legend pills.
  */
 
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend,
+} from 'recharts';
 
 const METRICS = [
-  { key: 'volt', name: 'Voltage', color: '#6366f1' },
-  { key: 'rotate', name: 'Rotation', color: '#8b5cf6' },
-  { key: 'pressure', name: 'Pressure', color: '#06b6d4' },
+  { key: 'volt',      name: 'Voltage',   color: '#6366f1' },
+  { key: 'rotate',    name: 'Rotation',  color: '#8b5cf6' },
+  { key: 'pressure',  name: 'Pressure',  color: '#06b6d4' },
   { key: 'vibration', name: 'Vibration', color: '#f59e0b' },
 ];
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-xl p-3 shadow-xl">
-      <p className="text-xs text-[var(--text-muted)] mb-2">{label}</p>
+    <div style={{
+      background: 'var(--bg-elevated)',
+      border: '1px solid var(--border-default)',
+      borderRadius: 'var(--radius-md)',
+      padding: '10px 14px',
+      boxShadow: 'var(--shadow-md)',
+      minWidth: 140,
+    }}>
+      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8, fontFamily: 'var(--font-mono)' }}>
+        {label}
+      </p>
       {payload.map((entry) => (
-        <p key={entry.name} className="text-xs" style={{ color: entry.color }}>
-          {entry.name}: <span className="font-medium">{entry.value?.toFixed(1)}</span>
-        </p>
+        <div key={entry.name} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4 }}>
+          <span style={{ fontSize: 11, color: entry.color, fontWeight: 500 }}>{entry.name}</span>
+          <span style={{ fontSize: 11, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+            {entry.value?.toFixed(2)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CustomLegend({ payload }) {
+  if (!payload?.length) return null;
+  return (
+    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', paddingTop: 12 }}>
+      {payload.map((entry) => (
+        <div key={entry.value} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <div style={{ width: 24, height: 2, background: entry.color, borderRadius: 1 }} />
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{entry.value}</span>
+        </div>
       ))}
     </div>
   );
@@ -29,13 +58,21 @@ function CustomTooltip({ active, payload, label }) {
 export default function TelemetryChart({ data, selectedMetric = null }) {
   if (!data || data.length === 0) {
     return (
-      <div className="glass-card p-6 flex items-center justify-center h-[250px] text-[var(--text-muted)] text-sm">
-        No telemetry data available
+      <div className="card" style={{
+        padding: 24,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 280,
+        flexDirection: 'column',
+        gap: 10,
+      }}>
+        <div style={{ fontSize: 20, opacity: 0.4 }}>📡</div>
+        <p className="t-caption">No telemetry data available</p>
       </div>
     );
   }
 
-  // Format timestamps for display
   const chartData = data.map((d) => ({
     ...d,
     time: new Date(d.datetime).toLocaleString('en-US', {
@@ -50,24 +87,38 @@ export default function TelemetryChart({ data, selectedMetric = null }) {
     : METRICS;
 
   return (
-    <div className="glass-card p-6" style={{ pointerEvents: 'auto' }}>
-      <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
-        Telemetry — Last 7 Days
-      </h3>
+    <div className="card" style={{ padding: 20 }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 16,
+        paddingBottom: 12,
+        borderBottom: '1px solid var(--border-subtle)',
+      }}>
+        <span className="t-card-title">Telemetry · Last 7 Days</span>
+        <span className="badge badge-neutral">{data.length} readings</span>
+      </div>
+
       <ResponsiveContainer width="100%" height={220}>
-        <LineChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+        <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
           <XAxis
             dataKey="time"
-            tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+            tick={{ fontSize: 10, fill: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}
             interval="preserveStartEnd"
-            tickCount={6}
+            tickCount={5}
+            axisLine={false}
+            tickLine={false}
           />
-          <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} width={40} />
-          <Tooltip content={<CustomTooltip />} />
-          <Legend
-            wrapperStyle={{ fontSize: '11px', color: 'var(--text-secondary)' }}
+          <YAxis
+            tick={{ fontSize: 10, fill: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}
+            width={36}
+            axisLine={false}
+            tickLine={false}
           />
+          <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'var(--border-default)', strokeWidth: 1 }} />
+          <Legend content={<CustomLegend />} />
           {metricsToShow.map((metric) => (
             <Line
               key={metric.key}
@@ -77,7 +128,7 @@ export default function TelemetryChart({ data, selectedMetric = null }) {
               stroke={metric.color}
               strokeWidth={1.5}
               dot={false}
-              activeDot={{ r: 3, strokeWidth: 0 }}
+              activeDot={{ r: 4, strokeWidth: 0 }}
             />
           ))}
         </LineChart>

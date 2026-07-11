@@ -1,12 +1,6 @@
 /**
- * InvestigationView — The main investigation page for a single machine.
- *
- * Layout:
- * - Machine header with status
- * - Query input
- * - Two-column: Telemetry + History | Reasoning Graph
- * - Evidence drawer (slide-out)
- * - Recommendation panel
+ * InvestigationView — Full machine investigation page.
+ * Redesigned: cleaner header, better section hierarchy, polished states.
  */
 
 import { useState, useEffect } from 'react';
@@ -18,11 +12,60 @@ import TelemetryChart from './TelemetryChart';
 import ReasoningGraph from './ReasoningGraph';
 import EvidenceDrawer from './EvidenceDrawer';
 
-const statusConfig = {
-  healthy: { label: 'Operational', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30' },
-  warning: { label: 'Warning', color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/30' },
-  critical: { label: 'Critical', color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30' },
+const STATUS_CONFIG = {
+  healthy:  { label: 'Operational', color: 'var(--success)', badgeClass: 'badge-healthy' },
+  warning:  { label: 'Warning',     color: 'var(--warning)', badgeClass: 'badge-warning' },
+  critical: { label: 'Critical',    color: 'var(--danger)',  badgeClass: 'badge-critical' },
 };
+
+const INVESTIGATION_STEPS = [
+  { label: 'Retrieving telemetry data',         icon: '📡' },
+  { label: 'Reviewing maintenance history',     icon: '🔧' },
+  { label: 'Searching technical documentation', icon: '📖' },
+  { label: 'Analyzing historical patterns',     icon: '📊' },
+  { label: 'Building causal reasoning graph',   icon: '🧠' },
+];
+
+function SectionHeader({ icon, title, badge }) {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      paddingBottom: 12,
+      borderBottom: '1px solid var(--border-subtle)',
+      marginBottom: 16,
+    }}>
+      <span style={{ fontSize: 14 }}>{icon}</span>
+      <span className="t-card-title">{title}</span>
+      {badge && (
+        <span className="badge badge-neutral" style={{ marginLeft: 'auto' }}>{badge}</span>
+      )}
+    </div>
+  );
+}
+
+function DataRow({ label, value, valueColor }) {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '6px 0',
+      borderBottom: '1px solid var(--border-subtle)',
+    }}>
+      <span className="t-caption">{label}</span>
+      <span style={{
+        fontSize: 'var(--text-xs)',
+        fontWeight: 500,
+        color: valueColor || 'var(--text-secondary)',
+        fontFamily: 'var(--font-mono)',
+      }}>
+        {value}
+      </span>
+    </div>
+  );
+}
 
 export default function InvestigationView() {
   const { machineId } = useParams();
@@ -34,70 +77,34 @@ export default function InvestigationView() {
   const [loadingStep, setLoadingStep] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  const steps = [
-    "Starting investigation...",
-    "Retrieving telemetry data...",
-    "Reviewing maintenance history...",
-    "Searching technical documentation...",
-    "Analyzing evidence...",
-    "Building reasoning graph..."
-  ];
+  const { result, loading: investigating, error: investigationError, investigate, retry, cancel, lastQuestion } =
+    useInvestigation(id);
 
-  const { result, loading: investigating, error: investigationError, investigate, retry, cancel, lastQuestion } = useInvestigation(id);
-
-  // loading-step progression
   useEffect(() => {
-    console.info(`[frontend][investigation-view] loading-step ${investigating ? 'start' : 'stop'} machineId=${id} step=${loadingStep}`);
-    if (!investigating) {
-      setLoadingStep(0);
-      return;
-    }
-    
-    const interval = setInterval(() => {
-      setLoadingStep((prev) => (prev < steps.length - 1 ? prev + 1 : prev));
-    }, 1500);
-    
-    return () => clearInterval(interval);
-  }, [investigating]);
-
-  // elapsed timer
-  useEffect(() => {
-    if (!investigating) {
-      setElapsedSeconds(0);
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setElapsedSeconds((prev) => prev + 1);
-    }, 1000);
-
-    return () => clearInterval(interval);
+    if (!investigating) { setLoadingStep(0); return; }
+    const iv = setInterval(() => setLoadingStep((p) => (p < INVESTIGATION_STEPS.length - 1 ? p + 1 : p)), 2200);
+    return () => clearInterval(iv);
   }, [investigating]);
 
   useEffect(() => {
-    const startedAt = performance.now();
-    console.info(`[frontend][machine-load] start machineId=${id}`);
+    if (!investigating) { setElapsedSeconds(0); return; }
+    const iv = setInterval(() => setElapsedSeconds((p) => p + 1), 1000);
+    return () => clearInterval(iv);
+  }, [investigating]);
+
+  useEffect(() => {
     setLoading(true);
-    api.getMachine(id)
-      .then((data) => {
-        console.info(`[frontend][machine-load] success machineId=${id} durationMs=${Math.round(performance.now() - startedAt)}`);
-        setMachine(data);
-      })
-      .catch((error) => {
-        console.error(`[frontend][machine-load] failure machineId=${id} durationMs=${Math.round(performance.now() - startedAt)}`, error);
-      })
-      .finally(() => {
-        console.info(`[frontend][machine-load] loading cleared machineId=${id} durationMs=${Math.round(performance.now() - startedAt)}`);
-        setLoading(false);
-      });
+    api.getMachine(id).then(setMachine).catch(console.error).finally(() => setLoading(false));
   }, [id]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
         <div className="investigating-pulse">
           <div className="dot" /><div className="dot" /><div className="dot" />
-          <span className="ml-3 text-[var(--text-muted)]">Loading machine data...</span>
+          <span style={{ marginLeft: 12, color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>
+            Loading machine data...
+          </span>
         </div>
       </div>
     );
@@ -105,152 +112,245 @@ export default function InvestigationView() {
 
   if (!machine) {
     return (
-      <div className="text-center py-20">
-        <p className="text-[var(--text-muted)]">Machine {machineId} not found.</p>
-        <Link to="/" className="text-indigo-400 text-sm mt-2 inline-block">← Back to Dashboard</Link>
+      <div style={{ textAlign: 'center', padding: '80px 24px' }}>
+        <div style={{ fontSize: 'var(--text-md)', color: 'var(--text-secondary)', marginBottom: 12 }}>
+          Machine {machineId} not found
+        </div>
+        <Link to="/" style={{ color: 'var(--accent-hover)', fontSize: 'var(--text-sm)' }}>
+          ← Back to Dashboard
+        </Link>
       </div>
     );
   }
 
-  const status = statusConfig[machine.status] || statusConfig.healthy;
+  const statusCfg = STATUS_CONFIG[machine.status] || STATUS_CONFIG.healthy;
 
   return (
     <div className="fade-in-up">
-      {/* ─── Breadcrumb + Header ─────────────────────── */}
-      <div className="mb-6">
-        <Link to="/" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors no-underline">
-          ← Back to Dashboard
-        </Link>
-        <div className="flex items-center gap-4 mt-3">
-          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold ${status.bg} ${status.color} border ${status.border}`}>
+      {/* ─── Machine Header ───────────────────────────── */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          {/* Avatar */}
+          <div style={{
+            width: 52,
+            height: 52,
+            borderRadius: 'var(--radius-lg)',
+            background: machine.status === 'critical' ? 'var(--danger-subtle)' :
+                        machine.status === 'warning'  ? 'var(--warning-subtle)' : 'var(--success-subtle)',
+            border: `1px solid ${machine.status === 'critical' ? 'var(--danger-border)' :
+                                  machine.status === 'warning'  ? 'var(--warning-border)' : 'var(--success-border)'}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 20,
+            fontWeight: 700,
+            color: statusCfg.color,
+            flexShrink: 0,
+          }}>
             {machine.machine_id}
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-[var(--text-primary)]">
+
+          {/* Info */}
+          <div style={{ flex: 1 }}>
+            <h1 className="t-section-title" style={{ marginBottom: 4 }}>
               Machine {machine.machine_id}
             </h1>
-            <div className="flex items-center gap-3 mt-1">
-              <span className="text-sm text-[var(--text-secondary)]">{machine.model.toUpperCase()}</span>
-              <span className="text-[var(--text-muted)]">·</span>
-              <span className="text-sm text-[var(--text-muted)]">{machine.age} years old</span>
-              <span className="text-[var(--text-muted)]">·</span>
-              <span className={`text-sm font-medium ${status.color}`}>
-                <span className={`status-dot ${machine.status} mr-1.5`} />
-                {status.label}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span className="t-mono" style={{ letterSpacing: '0.5px' }}>
+                {machine.model.toUpperCase()}
+              </span>
+              <span style={{ color: 'var(--border-default)' }}>·</span>
+              <span className="t-caption">{machine.age} years in service</span>
+              <span style={{ color: 'var(--border-default)' }}>·</span>
+              <span className={`badge ${statusCfg.badgeClass}`}>
+                <span className={`status-dot ${machine.status}`} style={{ width: 5, height: 5 }} />
+                {statusCfg.label}
               </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ─── Query Input ─────────────────────────────── */}
-      <div className="mb-8">
+      {/* ─── Query Input ──────────────────────────────── */}
+      <div style={{ marginBottom: 28 }}>
         <QueryInput onSubmit={investigate} loading={investigating} />
       </div>
 
-      {/* ─── Investigation Loading State ─────────────── */}
+      {/* ─── Investigation Loading State ──────────────── */}
       {investigating && (
-        <div className="glass-card p-8 mb-6 relative overflow-hidden">
-          <div className="flex flex-col items-center justify-center mb-6">
-            <div className="investigating-pulse mb-3">
-              <div className="dot" /><div className="dot" /><div className="dot" />
-            </div>
-            <p className="text-base font-semibold text-[var(--text-primary)]">
-              Sentinel is investigating...
-            </p>
-            <span className="text-xs text-[var(--text-muted)] mt-1 font-mono">
-              Elapsed: {elapsedSeconds}s
-            </span>
+        <div className="card" style={{ marginBottom: 20, overflow: 'hidden' }}>
+          {/* Progress bar at top */}
+          <div style={{
+            height: 2,
+            background: 'var(--border-subtle)',
+            position: 'relative',
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: 0, left: 0,
+              height: '100%',
+              width: `${Math.min(95, (loadingStep / (INVESTIGATION_STEPS.length - 1)) * 100)}%`,
+              background: 'linear-gradient(90deg, var(--accent), var(--violet))',
+              transition: 'width 1.5s ease',
+            }} />
           </div>
-          <div className="max-w-md mx-auto space-y-2.5 bg-[var(--bg-primary)] p-5 rounded-xl border border-[var(--border-subtle)]">
-            {steps.map((step, idx) => {
-              const isCompleted = loadingStep > idx;
-              const isActive = loadingStep === idx;
-              
-              return (
-                <div key={idx} className="flex items-center gap-3 text-xs">
-                  {isCompleted ? (
-                    <span className="text-emerald-400 font-bold w-4 text-center">✓</span>
-                  ) : isActive ? (
-                    <span className="status-dot healthy animate-pulse w-2 h-2 mx-1" />
-                  ) : (
-                    <span className="text-[var(--text-muted)] w-4 text-center">•</span>
-                  )}
-                  <span className={isCompleted ? "text-[var(--text-secondary)] line-through opacity-70" : isActive ? "text-[var(--text-primary)] font-medium" : "text-[var(--text-muted)]"}>
-                    {step}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex justify-center mt-6">
-            <button
-              onClick={cancel}
-              className="px-4 py-2 text-xs font-semibold text-red-400 border border-red-500/30 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
-            >
-              Cancel Investigation
-            </button>
-          </div>
-        </div>
-      )}
 
-      {investigating && (
-        <div className="sr-only" aria-live="polite">
-          {steps[loadingStep]} (elapsed: {elapsedSeconds} seconds)
+          <div style={{ padding: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div className="investigating-pulse">
+                  <div className="dot" /><div className="dot" /><div className="dot" />
+                </div>
+                <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Sentinel is investigating
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span className="t-mono" style={{ color: 'var(--text-muted)' }}>
+                  {elapsedSeconds}s elapsed
+                </span>
+                <button onClick={cancel} className="btn btn-danger btn-sm">
+                  Cancel
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {INVESTIGATION_STEPS.map((step, idx) => {
+                const done    = loadingStep > idx;
+                const active  = loadingStep === idx;
+                const pending = loadingStep < idx;
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '7px 12px',
+                      borderRadius: 'var(--radius-sm)',
+                      background: active ? 'var(--accent-subtle)' : 'transparent',
+                      transition: 'background 0.2s ease',
+                    }}
+                  >
+                    <div style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      fontSize: 10,
+                      background: done ? 'var(--success)' : active ? 'var(--accent)' : 'var(--bg-surface)',
+                      border: pending ? '1px solid var(--border-subtle)' : 'none',
+                    }}>
+                      {done ? (
+                        <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                          <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      ) : active ? (
+                        <div style={{
+                          width: 6, height: 6,
+                          borderRadius: '50%',
+                          background: 'white',
+                          animation: 'pulse-dot 1s ease-in-out infinite',
+                        }} />
+                      ) : null}
+                    </div>
+                    <span style={{
+                      fontSize: 'var(--text-xs)',
+                      color: done ? 'var(--text-muted)' : active ? 'var(--text-primary)' : 'var(--text-muted)',
+                      fontWeight: active ? 500 : 400,
+                      textDecoration: done ? 'line-through' : 'none',
+                    }}>
+                      {step.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
       {/* ─── Investigation Error ──────────────────────── */}
       {investigationError && (
-        <div className="glass-card p-6 mb-6 border-red-500/30 bg-red-500/5">
-          <div className="flex items-start gap-3">
-            <span className="text-xl">⚠️</span>
-            <div className="flex-1">
-              <h4 className="text-sm font-semibold text-red-400">Investigation Failed</h4>
-              <p className="text-xs text-[var(--text-secondary)] mt-1 leading-relaxed">
-                {investigationError}
-              </p>
-              {lastQuestion && (
-                <div className="mt-4 flex gap-3">
-                  <button
-                    onClick={retry}
-                    className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg hover:shadow-lg hover:shadow-indigo-500/25 transition-all cursor-pointer border-none"
-                  >
-                    Retry Investigation
-                  </button>
-                  <button
-                    onClick={() => {
-                      // Programmatically re-run investigation with a default or slightly modified prompt
-                      investigate(lastQuestion);
-                    }}
-                    className="px-4 py-2 text-xs font-semibold text-[var(--text-secondary)] border border-[var(--border-subtle)] hover:bg-[var(--bg-primary)] rounded-lg transition-colors cursor-pointer"
-                    style={{ display: 'none' }} /* Hidden, just keeping structure */
-                  >
-                    Try Again
-                  </button>
-                </div>
-              )}
+        <div style={{
+          background: 'var(--danger-subtle)',
+          border: '1px solid var(--danger-border)',
+          borderRadius: 'var(--radius-lg)',
+          padding: 20,
+          marginBottom: 20,
+          display: 'flex',
+          gap: 14,
+          alignItems: 'flex-start',
+        }}>
+          <div style={{
+            width: 32,
+            height: 32,
+            borderRadius: '50%',
+            background: 'var(--danger-subtle)',
+            border: '1px solid var(--danger-border)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            fontSize: 14,
+          }}>⚠</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--danger)', marginBottom: 6 }}>
+              Investigation Failed
             </div>
+            <p className="t-body" style={{ marginBottom: 16 }}>{investigationError}</p>
+            {lastQuestion && (
+              <button onClick={retry} className="btn btn-primary btn-sm">
+                Retry Investigation
+              </button>
+            )}
           </div>
         </div>
       )}
 
       {/* ─── Investigation Result ─────────────────────── */}
       {result && (
-        <div className="space-y-6 mb-8 fade-in-up">
-          {/* Summary */}
-          <div className="glass-card p-6">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-base">🔍</span>
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Investigation Summary</h3>
-              <span className="ml-auto text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-400 font-medium">
-                {Math.round(result.confidence * 100)}% confidence
-              </span>
+        <div style={{ marginBottom: 28 }} className="fade-in-up">
+          {/* Summary + Root Cause */}
+          <div className="card" style={{ padding: 24, marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 16 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Investigation Summary
+                  </span>
+                  <span className="badge badge-accent">
+                    {Math.round(result.confidence * 100)}% confidence
+                  </span>
+                </div>
+                <p className="t-body" style={{ lineHeight: 1.7 }}>{result.summary}</p>
+              </div>
             </div>
-            <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{result.summary}</p>
-            <div className="mt-3 flex items-center gap-2">
-              <span className="text-xs text-[var(--text-muted)]">Root cause:</span>
-              <span className="text-xs font-medium text-red-400">{result.root_cause}</span>
+
+            {/* Root Cause highlight */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '10px 16px',
+              background: 'var(--danger-subtle)',
+              border: '1px solid var(--danger-border)',
+              borderRadius: 'var(--radius-md)',
+            }}>
+              <div style={{
+                width: 6, height: 6, borderRadius: '50%',
+                background: 'var(--danger)',
+                boxShadow: '0 0 6px var(--danger)',
+                flexShrink: 0,
+              }} />
+              <span className="t-caption" style={{ color: 'var(--text-muted)' }}>Root cause</span>
+              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--danger)' }}>
+                {result.root_cause}
+              </span>
             </div>
           </div>
 
@@ -258,48 +358,58 @@ export default function InvestigationView() {
           <ReasoningGraph investigation={result} onNodeClick={setSelectedNode} />
 
           {/* Recommendation */}
-          <div className="glass-card p-6 border-emerald-500/20">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-base">✅</span>
-              <h3 className="text-sm font-semibold text-emerald-400">Recommendation</h3>
-            </div>
-            <div className="text-sm text-[var(--text-secondary)] leading-relaxed whitespace-pre-line">
+          <div className="card" style={{
+            padding: 24,
+            marginTop: 12,
+            borderColor: 'var(--success-border)',
+            background: 'linear-gradient(135deg, var(--bg-card), rgba(16,185,129,0.03))',
+          }}>
+            <SectionHeader icon="✓" title="Recommended Action" />
+            <p className="t-body" style={{ lineHeight: 1.7, whiteSpace: 'pre-line' }}>
               {result.recommendation}
-            </div>
+            </p>
           </div>
 
           {/* Sources */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-[var(--text-muted)]">Sources consulted:</span>
-            {result.sources_consulted.map((source) => (
-              <span key={source} className="text-xs px-2 py-0.5 rounded-md bg-[var(--bg-card)] border border-[var(--border-subtle)] text-[var(--text-secondary)]">
-                {source}
-              </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+            <span className="t-caption">Sources consulted:</span>
+            {result.sources_consulted?.map((source) => (
+              <span key={source} className="badge badge-neutral">{source}</span>
             ))}
           </div>
         </div>
       )}
 
-      {/* ─── Machine Data (always visible) ────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* ─── Machine Data ─────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         {/* Telemetry */}
         <TelemetryChart data={machine.recent_telemetry} />
 
-        {/* History */}
-        <div className="space-y-4">
+        {/* History column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {/* Errors */}
-          <div className="glass-card p-5">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
-              ⚠️ Recent Errors
-            </h3>
+          <div className="card" style={{ padding: 20 }}>
+            <SectionHeader
+              icon="⚠"
+              title="Recent Errors"
+              badge={machine.recent_errors.length > 0 ? machine.recent_errors.length : null}
+            />
             {machine.recent_errors.length === 0 ? (
-              <p className="text-xs text-[var(--text-muted)]">No recent errors</p>
+              <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                <p className="t-caption">No recent errors</p>
+              </div>
             ) : (
-              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              <div style={{ maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {machine.recent_errors.slice(0, 10).map((e, i) => (
-                  <div key={i} className="flex items-center justify-between text-xs p-2 rounded-lg bg-[var(--bg-primary)]">
-                    <span className="text-amber-400 font-mono">{e.error_id}</span>
-                    <span className="text-[var(--text-muted)]">{new Date(e.datetime).toLocaleDateString()}</span>
+                  <div key={i} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    padding: '6px 8px',
+                    borderRadius: 'var(--radius-sm)',
+                    background: i % 2 === 0 ? 'transparent' : 'var(--bg-base)',
+                  }}>
+                    <span className="t-mono" style={{ color: 'var(--warning)' }}>{e.error_id}</span>
+                    <span className="t-caption">{new Date(e.datetime).toLocaleDateString()}</span>
                   </div>
                 ))}
               </div>
@@ -307,18 +417,28 @@ export default function InvestigationView() {
           </div>
 
           {/* Maintenance */}
-          <div className="glass-card p-5">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
-              🔧 Recent Maintenance
-            </h3>
+          <div className="card" style={{ padding: 20 }}>
+            <SectionHeader
+              icon="⚙"
+              title="Maintenance Log"
+              badge={machine.recent_maintenance.length > 0 ? machine.recent_maintenance.length : null}
+            />
             {machine.recent_maintenance.length === 0 ? (
-              <p className="text-xs text-[var(--text-muted)]">No recent maintenance</p>
+              <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                <p className="t-caption">No recent maintenance records</p>
+              </div>
             ) : (
-              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              <div style={{ maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {machine.recent_maintenance.slice(0, 10).map((m, i) => (
-                  <div key={i} className="flex items-center justify-between text-xs p-2 rounded-lg bg-[var(--bg-primary)]">
-                    <span className="text-cyan-400 font-mono">{m.comp}</span>
-                    <span className="text-[var(--text-muted)]">{new Date(m.datetime).toLocaleDateString()}</span>
+                  <div key={i} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    padding: '6px 8px',
+                    borderRadius: 'var(--radius-sm)',
+                    background: i % 2 === 0 ? 'transparent' : 'var(--bg-base)',
+                  }}>
+                    <span className="t-mono" style={{ color: 'var(--info)' }}>{m.comp}</span>
+                    <span className="t-caption">{new Date(m.datetime).toLocaleDateString()}</span>
                   </div>
                 ))}
               </div>
@@ -327,15 +447,27 @@ export default function InvestigationView() {
 
           {/* Failures */}
           {machine.recent_failures.length > 0 && (
-            <div className="glass-card p-5 border-red-500/20">
-              <h3 className="text-sm font-semibold text-red-400 mb-3">
-                💥 Recent Failures
-              </h3>
-              <div className="space-y-2">
+            <div className="card" style={{
+              padding: 20,
+              borderColor: 'var(--danger-border)',
+              background: 'linear-gradient(135deg, var(--bg-card), rgba(239,68,68,0.02))',
+            }}>
+              <SectionHeader
+                icon="💥"
+                title="Failure Events"
+                badge={machine.recent_failures.length}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {machine.recent_failures.map((f, i) => (
-                  <div key={i} className="flex items-center justify-between text-xs p-2 rounded-lg bg-red-500/5">
-                    <span className="text-red-400 font-mono font-medium">{f.failure}</span>
-                    <span className="text-[var(--text-muted)]">{new Date(f.datetime).toLocaleDateString()}</span>
+                  <div key={i} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    padding: '6px 8px',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'var(--danger-subtle)',
+                  }}>
+                    <span className="t-mono" style={{ color: 'var(--danger)', fontWeight: 600 }}>{f.failure}</span>
+                    <span className="t-caption">{new Date(f.datetime).toLocaleDateString()}</span>
                   </div>
                 ))}
               </div>
@@ -346,11 +478,16 @@ export default function InvestigationView() {
 
       {/* ─── Evidence Drawer ──────────────────────────── */}
       <EvidenceDrawer node={selectedNode} onClose={() => setSelectedNode(null)} />
-
-      {/* Overlay when drawer is open */}
       {selectedNode && (
         <div
-          className="fixed inset-0 bg-black/40 z-40"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 40,
+            backdropFilter: 'blur(2px)',
+          }}
+          className="fade-in"
           onClick={() => setSelectedNode(null)}
         />
       )}

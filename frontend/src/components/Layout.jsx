@@ -1,6 +1,6 @@
 /**
  * Layout — App shell with top navigation bar.
- * Dark industrial theme. Minimal chrome, maximum content.
+ * Refined: Tighter nav, better branding, clear status indicator.
  */
 
 import { Outlet, Link, useLocation } from 'react-router-dom';
@@ -9,33 +9,92 @@ export default function Layout() {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
+    <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
       {/* ─── Top Nav ──────────────────────────────────── */}
-      <nav className="sticky top-0 z-40 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)]/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 no-underline">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <nav style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 40,
+        borderBottom: '1px solid var(--border-subtle)',
+        background: 'rgba(8, 12, 20, 0.90)',
+        backdropFilter: 'blur(16px)',
+      }}>
+        <div style={{
+          maxWidth: 1280,
+          margin: '0 auto',
+          padding: '0 24px',
+          height: 56,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 16,
+        }}>
+          {/* Brand */}
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+            <div style={{
+              width: 30,
+              height: 30,
+              borderRadius: 8,
+              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              boxShadow: '0 0 14px rgba(99,102,241,0.35)',
+            }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3" />
-                <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
+                <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" />
               </svg>
             </div>
-            <span className="text-lg font-bold text-[var(--text-primary)] tracking-tight">
-              Senti<span className="text-indigo-400">nel</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
+              Senti<span style={{ color: 'var(--accent-hover)' }}>nel</span>
             </span>
           </Link>
 
-          <div className="flex items-center gap-6">
-            <span className="text-xs text-[var(--text-muted)] font-mono tracking-wider uppercase">
-              AI Investigation Engine
+          {/* Center: breadcrumb location */}
+          {location.pathname !== '/' && (
+            <div style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+            }}>
+              <Link to="/" style={{ fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none' }} className="hover-link">
+                Dashboard
+              </Link>
+              <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>/</span>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                {location.pathname.includes('/machine/') ? `Machine ${location.pathname.split('/').pop()}` : ''}
+              </span>
+            </div>
+          )}
+
+          {/* Right: status */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{
+              fontSize: 11,
+              color: 'var(--text-muted)',
+              fontFamily: 'var(--font-mono)',
+              letterSpacing: '0.5px',
+              textTransform: 'uppercase',
+            }}>
+              AI Engine
             </span>
-            <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+            <div style={{
+              width: 7,
+              height: 7,
+              borderRadius: '50%',
+              background: 'var(--success)',
+              boxShadow: '0 0 7px var(--success)',
+            }} />
           </div>
         </div>
       </nav>
 
       {/* ─── Page Content ─────────────────────────────── */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 24px' }}>
         <Outlet />
       </main>
     </div>
