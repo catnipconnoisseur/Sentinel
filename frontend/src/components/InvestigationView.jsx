@@ -137,8 +137,9 @@ export default function InvestigationView() {
   const statusCfg = STATUS_CONFIG[machine.status] || STATUS_CONFIG.healthy;
 
   return (
-    <div className="fade-in-up">
-      {/* ─── Machine Header ───────────────────────────── */}
+    <>
+      <div className="fade-in-up">
+        {/* ─── Machine Header ───────────────────────────── */}
       <div style={{ marginBottom: 28 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           {/* Avatar */}
@@ -980,6 +981,8 @@ export default function InvestigationView() {
         </div>
       </div>
 
+      </div>
+
       {/* ─── Evidence Drawer ──────────────────────────── */}
       <EvidenceDrawer node={selectedNode} onClose={() => setSelectedNode(null)} />
       {selectedNode && (
@@ -995,6 +998,6 @@ export default function InvestigationView() {
           onClick={() => setSelectedNode(null)}
         />
       )}
-    </div>
+    </>
   );
 }
