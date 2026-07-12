@@ -41,7 +41,7 @@ graph TD
 
     %% External
     subgraph AMD [AMD Compute Layer]
-        Fireworks[Fireworks AI API<br/>Llama 3.1 70B on MI300X]
+        Fireworks[Fireworks AI API<br/>GLM-5p2 on MI300X]
     end
 
     %% Flow
@@ -60,10 +60,10 @@ graph TD
 * **Frontend**: React, Vite, TailwindCSS, React Flow (for the visual graph), Recharts.
 * **Backend**: FastAPI, SQLAlchemy.
 * **Databases**: SQLite (for tabular telemetry/logs), ChromaDB (for vector search over manuals).
-* **AI & Compute**: **Fireworks AI** running Llama 3.1 70B Instruct, powered by **AMD MI300X accelerators**. We enforce strict JSON schema output to guarantee valid graph structures on every request.
-
+* **AI & Compute**: **Fireworks AI** running GLM-5p2, powered by **AMD Instinct™ MI300X accelerators**. We enforce strict JSON schema output to guarantee valid graph structures on every request.
+ 
 ## AMD Integration
-This project was built specifically for the **AMD Developer Challenge**. We fulfill the AMD compute requirement by utilizing the **Fireworks AI API**, which serves open-source models natively on AMD Instinct™ MI300X accelerators. By offloading our heavy multi-step causal reasoning to Llama 3.1 70B via Fireworks, we achieve the rapid time-to-first-token necessary for a fluid, interactive UI, directly demonstrating the raw throughput capabilities of AMD hardware.
+This project was built specifically for the **AMD Developer Challenge**. We fulfill the AMD compute requirement by utilizing the **Fireworks AI API**, which serves open-source and proprietary models natively on AMD Instinct™ MI300X accelerators. By offloading our heavy multi-step causal reasoning to the highly capable **GLM-5p2** model via Fireworks, we achieve rapid inference times (~12-15 seconds for a complete multi-step report), directly demonstrating the raw throughput capabilities of AMD hardware.
 
 ## Running Locally
 
@@ -112,33 +112,33 @@ We recommend [Railway](https://railway.app/) for a hassle-free public URL:
 4. Add a custom domain to the `frontend` service in Railway settings.
 5. Deployment is complete! The first startup will take ~15 seconds extra as the AI indexes the factory manuals into ChromaDB.
 
-## 📸 Screenshots & Demo Walkthrough
+## 📸 Screenshots
 
-### 1. Dashboard Overview
-Interactive grid list displaying live status metrics and historical failure profiles of all factory machinery.
+### Dashboard
+Interactive grid list displaying live status metrics and historical failure profiles of all machinery.
 ![Dashboard](docs/images/dashboard.png)
 
-### 2. Live Machinery Analysis & Selection
+### Machine Selection
 Inspects historical work orders, active sensor alarms, and guides user query entry.
 ![Machine Selection](docs/images/machine-selection.png)
 
-### 3. Evidentiary Retrieval & RAG Indexing
-Sentinel constructs contextual bundles from raw database parameters and queries local technical manual sections.
-![Investigation Loading](docs/images/investigation-loading.png)
+### AI Investigation Loading
+Sentinel constructs contextual RAG bundles from raw database parameters and queries local manuals.
+![AI Investigation Loading](docs/images/investigation-loading.png)
 
-### 4. Causal Reasoning Incident Report
-Sentinel generates dynamic engineering-grade incident reports, confidence weight explanations, and chronologically sequenced failure timelines.
-![Investigation Summary](docs/images/investigation-summary.png)
+### AI Investigation
+Sentinel generates dynamic incident reports, confidence explanations, and failure timelines.
+![AI Investigation](docs/images/investigation-summary.png)
 
-### 5. Interactive Reasoning Graph (React Flow)
-Visualizes causal relationships between root causes, symptoms, and phased action plans.
+### Reasoning Graph
+Visualizes causal relationships between root causes, symptoms, and actions.
 ![Reasoning Graph](docs/images/reasoning-graph.png)
 
-### 6. Evidence Attribution & Technical Citations
-Exposes exact technical manual excerpts, troubleshooting steps, and maintenance logs supporting every node in the graph.
+### Evidence Panel
+Exposes exact technical manual excerpts, troubleshooting steps, and maintenance logs supporting every node.
 ![Evidence Panel](docs/images/evidence-panel.png)
 
-### 7. Action Priorities & Engineering Justifications
+### Engineering Report
 Classifies recommendations by urgency, providing safety and performance justifications.
 ![Engineering Report](docs/images/engineering-report.png)
 

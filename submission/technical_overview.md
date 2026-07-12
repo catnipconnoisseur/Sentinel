@@ -42,6 +42,6 @@ Unlike generic chatbot agents, Sentinel executes a highly structured 10-step fai
 ## 3. Technology Stack & Integrations
 - **Frontend:** React, Vite, XYFlow (React Flow), Recharts, TailwindCSS.
 - **Backend:** FastAPI, Python, SQLAlchemy, SQLite.
-- **AI & RAG:** Fireworks AI API (Llama 3.1 70B Instruct / GLM), ChromaDB, Sentence-Transformers.
-- **Compute Layer:** Powered by **AMD Instinct™ MI300X GPU accelerators** (via Fireworks hosting), achieving sub-30s inference.
+- **AI & RAG:** Fireworks AI API (GLM-5p2), ChromaDB, Sentence-Transformers.
+- **Compute Layer:** Powered by **AMD Instinct™ MI300X GPU accelerators** (via Fireworks hosting), achieving sub-15s inference.
 - **Containerization:** Docker, Docker Compose, Nginx.

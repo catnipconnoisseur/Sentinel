@@ -22,19 +22,19 @@ const path = require('path');
     await page.goto('http://localhost:5175', { waitUntil: 'networkidle2' });
 
     console.log('Waiting for machine cards to load...');
-    await page.waitForSelector('.glass-card', { timeout: 10000 });
-
+    await page.waitForSelector('.card-interactive', { timeout: 10000 });
+ 
     // Capture dashboard screenshot
     console.log('📸 Capturing dashboard.png...');
     await page.screenshot({ path: path.join(outputDir, 'dashboard.png') });
-
+ 
     // Capture machine selection screenshot (focusing on Machine 1)
     console.log('📸 Capturing machine-selection.png...');
     await page.screenshot({ path: path.join(outputDir, 'machine-selection.png') });
-
+ 
     // Navigate to Machine 1
     console.log('Navigating to Machine 1 Detail Page...');
-    await page.click('a[href="/machines/1"]');
+    await page.click('a[href="/machine/1"]');
     await page.waitForSelector('textarea, input', { timeout: 10000 });
 
     // Type query

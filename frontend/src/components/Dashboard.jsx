@@ -64,7 +64,6 @@ export default function Dashboard() {
   }, []);
 
   const filtered = useMemo(() => {
-    console.log('[Dashboard] useMemo filtering machines count:', machines.length, 'search:', JSON.stringify(search), 'statusFilter:', statusFilter);
     const res = machines.filter((m) => {
       const matchesSearch =
         String(m.machine_id).includes(search) ||
@@ -72,7 +71,6 @@ export default function Dashboard() {
       const matchesStatus = statusFilter === 'all' || m.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-    console.log('[Dashboard] useMemo filtered count:', res.length);
     return res;
   }, [machines, search, statusFilter]);
 

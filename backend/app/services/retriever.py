@@ -176,7 +176,7 @@ RECENT ERRORS (Last 7 Days):
 MAINTENANCE HISTORY (Last 10 records):
 {chr(10).join(maint_summary) if maint_summary else "None"}
 
-TELEMETRY SUMMARY (Last 48 Hours):
+TELEMETRY SUMMARY (Last 24 Hours):
 {telemetry_summary}
 
 RELEVANT TECHNICAL DOCUMENTATION & HISTORICAL CASES (Retrieved via RAG):

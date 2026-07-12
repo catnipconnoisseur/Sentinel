@@ -94,9 +94,42 @@ export default function Layout() {
       </nav>
 
       {/* ─── Page Content ─────────────────────────────── */}
-      <main style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 24px' }}>
+      <main style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 24px', paddingBottom: 64 }}>
         <Outlet />
       </main>
+
+      {/* ─── Footer ───────────────────────────────────── */}
+      <footer style={{
+        borderTop: '1px solid var(--border-subtle)',
+        background: 'var(--bg-primary)',
+        padding: '24px 0',
+        textAlign: 'center',
+        marginTop: 'auto',
+      }}>
+        <div style={{
+          maxWidth: 1280,
+          margin: '0 auto',
+          padding: '0 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 16,
+        }}>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            © {new Date().getFullYear()} Sentinel. All rights reserved.
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+              Powered by <strong style={{ color: 'var(--text-secondary)' }}>AMD Instinct™ MI300X</strong> accelerators
+            </span>
+            <span style={{ color: 'var(--border-default)', fontSize: 12 }}>|</span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              Fireworks AI Serverless Compute
+            </span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

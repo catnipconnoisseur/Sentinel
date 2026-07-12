@@ -351,7 +351,7 @@ export default function InvestigationView() {
             <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 24 }}>
               {/* Left Column: Causal Analysis */}
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Incident Briefing
                   </span>
@@ -361,6 +361,20 @@ export default function InvestigationView() {
                       result.executive_summary.urgency.toLowerCase() === 'high' ? 'badge-warning' : 'badge-neutral'
                     }`}>
                       {result.executive_summary.urgency} Urgency
+                    </span>
+                  )}
+                  {result.inference_time_ms && (
+                    <span className="badge badge-accent" style={{
+                      marginLeft: 'auto',
+                      background: 'rgba(99, 102, 241, 0.15)',
+                      border: '1px solid rgba(99, 102, 241, 0.3)',
+                      color: 'var(--accent-hover)',
+                      fontSize: '11px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}>
+                      ⚡ {(result.inference_time_ms / 1000).toFixed(1)}s inference using {result.model_name ? result.model_name.split('/').pop().toUpperCase() : 'GLM-5P2'} on AMD Instinct™ MI300X
                     </span>
                   )}
                 </div>

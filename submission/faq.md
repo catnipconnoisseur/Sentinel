@@ -17,7 +17,7 @@ The RAG pipeline retrieves unstructured technical text from our shared industria
 ## 2. Infrastructure & AMD Compute
 
 ### Q3: How does Sentinel utilize AMD compute resources?
-Sentinel is integrated with the **Fireworks AI API**, which serves Llama 3.1 70B and other open-source models natively on **AMD Instinct™ MI300X accelerators**. This offloads heavy multi-step logical reasoning to AMD hardware, yielding time-to-first-token latencies and allowing us to compile complex causal networks in under 28 seconds.
+Sentinel is integrated with the **Fireworks AI API**, which serves GLM-5p2 and other models natively on **AMD Instinct™ MI300X accelerators**. This offloads heavy multi-step logical reasoning to AMD hardware, yielding time-to-first-token latencies and allowing us to compile complex causal networks in under 28 seconds.
 
 ### Q4: Is the database generation mock data or real?
 When Sentinel first boots, a bootstrapping script generates 48 hours of highly realistic synthetic industrial sensor telemetry (vibration, voltage, rotation, pressure) simulating normal operations, transient faults, and pre-failure degradation. This represents a representative machinery environment.

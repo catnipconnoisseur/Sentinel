@@ -14,10 +14,10 @@ This manual Root Cause Analysis (RCA) process is slow, prone to cognitive overlo
 Sentinel solves this by integrating:
 - **Relational Databases (SQLite):** Aggregates structured telemetry data and maintenance logs.
 - **Vector Databases (ChromaDB):** Indexes and retrieves OEM machinery manuals, SOPs, and historical failure cases.
-- **Fireworks AI (Llama 3.1 70B & GLM):** Executes a deep, structured engineering reasoning loop, generating a dynamic causal graph (visualized in React Flow) explaining exactly how the system degraded, what evidence supports the diagnosis, and why competing hypotheses were rejected.
+- **Fireworks AI (GLM-5p2):** Executes a deep, structured engineering reasoning loop, generating a dynamic causal graph (visualized in React Flow) explaining exactly how the system degraded, what evidence supports the diagnosis, and why competing hypotheses were rejected.
 
 ## 4. Key Differentiators & Innovation
 - **Engineering Self-Challenge Audit:** Evaluates the final diagnosis against contradicting signals and lists additional verification evidence needed.
 - **Traceable Attribution:** Every node in the reasoning graph maps directly to live telemetry anomalies or Technical Manual excerpts.
 - **Dynamic Causal Graphs:** React Flow graph structures are generated in real-time, matching physical dependencies rather than static, predefined visual templates.
-- **Fast, Contrained Structured Outputs:** Leverages Fireworks AI's JSON-schema grammar compiler on AMD Instinct MI300X accelerators to guarantee valid schemas under 28 seconds.
+- **Fast, Contrained Structured Outputs:** Leverages Fireworks AI's JSON-schema grammar compiler on AMD Instinct MI300X accelerators to guarantee valid schemas under 15 seconds.

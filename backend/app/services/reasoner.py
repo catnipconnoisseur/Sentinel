@@ -36,7 +36,7 @@ def get_client():
         )
     return _client
 
-# Using glm-5p2 for optimized latency and accurate schema validation
+# GLM-5p2 — runs on AMD Instinct MI300X via Fireworks AI
 MODEL = "accounts/fireworks/models/glm-5p2"
 
 # Request timeout in seconds — prevents indefinite hangs
@@ -164,6 +164,13 @@ def generate_reasoning_graph(context: str, question: str, trace_id: str = "inves
     try:
         request_started_at = time.perf_counter()
         _log_stage(trace_id, 9, "Fireworks request sent", "start", request_started_at, f"model={MODEL} timeout={FIREWORKS_TIMEOUT_SECONDS}s max_tokens={FIREWORKS_MAX_TOKENS}")
+        schema_dict = InvestigationResult.model_json_schema()
+        if "properties" in schema_dict:
+            schema_dict["properties"].pop("inference_time_ms", None)
+            schema_dict["properties"].pop("model_name", None)
+        if "required" in schema_dict:
+            schema_dict["required"] = [r for r in schema_dict["required"] if r not in ("inference_time_ms", "model_name")]
+
         response = client.chat.completions.create(
             model=MODEL,
             messages=[
@@ -174,7 +181,7 @@ def generate_reasoning_graph(context: str, question: str, trace_id: str = "inves
                 "type": "json_schema",
                 "json_schema": {
                     "name": "InvestigationResult",
-                    "schema": InvestigationResult.model_json_schema(),
+                    "schema": schema_dict,
                     # strict: True — enabled now that all Optional (anyOf/null) fields have been removed.
                     # This enforces grammar-constrained decoding and prevents infinite looping/duplicate keys.
                     "strict": True
@@ -206,6 +213,11 @@ def generate_reasoning_graph(context: str, question: str, trace_id: str = "inves
         result_json = response.choices[0].message.content
         finish_reason = response.choices[0].finish_reason if response.choices else None
         result = _parse_with_recovery(result_json, finish_reason, trace_id)
+        
+        # Populate metadata fields
+        result.inference_time_ms = round((response_finished_at - request_started_at) * 1000, 1)
+        result.model_name = MODEL
+        
         _log_stage(trace_id, 12, "JSON parsing", "success", parse_started_at, f"nodes={len(result.nodes)} edges={len(result.edges)}")
         _log_stage(trace_id, 13, "Graph nodes generated", "success", parse_started_at, f"node_count={len(result.nodes)} edge_count={len(result.edges)}")
         return result

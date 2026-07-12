@@ -96,7 +96,7 @@ graph TD
 ```
 
 ### Presenter Narration Script (Duration: ~25 seconds)
-> *"Under the hood, Sentinel is built with a highly optimized stack. The React frontend communicates via a FastAPI backend. FastAPI pulls structured parameters from SQLite and queries ChromaDB for vectorized manuals. To achieve industrial reliability, we execute the Llama 3.1 70B model using the Fireworks AI API. Crucially, Fireworks runs on AMD Instinct MI300X accelerators. This massive compute throughput allows us to perform strict JSON-schema grammar validation and return complex causal graphs in under 28 seconds."*
+> *"Under the hood, Sentinel is built with a highly optimized stack. The React frontend communicates via a FastAPI backend. FastAPI pulls structured parameters from SQLite and queries ChromaDB for vectorized manuals. To achieve industrial reliability, we execute the GLM-5p2 reasoning model using the Fireworks AI API. Crucially, Fireworks runs on AMD Instinct MI300X accelerators. This massive compute throughput allows us to perform strict JSON-schema grammar validation and return complex causal graphs in under 28 seconds."*
 
 ---
 
