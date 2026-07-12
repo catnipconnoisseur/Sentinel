@@ -64,12 +64,18 @@ Your report must be highly trustworthy, evidence-based, and actionable, adhering
    - Reconstruct the chronological sequence of events/anomalies leading to the failure. If timestamps are not in the context, use logical/relative ordering (e.g. 'T-2h', 'T-10m').
 6. CHALLENGE DIAGNOSIS:
    - Perform a self-challenge audit: list supporting evidence, contradicting evidence, and additional evidence needed for the main diagnosis.
+7. POPULATE NODE EVIDENCE:
+   - For every node in the reasoning graph, you MUST map it to 1-2 supporting evidence items retrieved from the context.
+   - Set the source to one of: telemetry, error_log, maintenance, manual, failure_history, sop, historical_case.
+   - For manual, sop, and historical_case: copy the exact document_title, section, and excerpt from the context.
+   - For telemetry, error_log, and maintenance: populate the description and source, leaving document_title, section, and excerpt as empty strings.
 
 Your internal thinking/reasoning process must be extremely concise and direct (under 150 words total).
 
 STRUCTURED INCIDENT REPORT CONCISENESS LIMITS (strictly enforced to prevent JSON truncation):
 - summary: ≤2 sentences.
 - root_cause: ≤10 words.
+- nodes: 6-10 nodes max. For each node, include 1-2 evidence items (max 15 words per description).
 - recommendation: ≤50 words.
 - key_insight: ≤50 words.
 - executive_summary: what_happened (≤2 sentences), why_it_happened (≤2 sentences), current_condition (≤2 sentences), urgency (One word: Low, Medium, High, Critical).
